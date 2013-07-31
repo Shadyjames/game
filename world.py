@@ -89,7 +89,7 @@ class World:
 		#Write the world dimensions
 		writebuffer = ''
 
-		#It may seem excessive, but the world dimensions are 16-bit
+		#It may seem excessive, but the world dimensions are 16-byte
 		#lick my balls
 		xstring = hex(self.x)[2:].zfill(32)
 		ystring = hex(self.y)[2:].zfill(32)
