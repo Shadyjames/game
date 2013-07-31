@@ -10,17 +10,34 @@ class World:
 		self.z = z
 		self.x_chunks = x/chunksize
 		self.y_chunks = y/chunksize
-		self.chunksize = chunksize
+		self.chunkwidth = chunksize
+		self.chunksize = pow(self.chunkwidth, 2)
 		self.chunks = self.new_chunklist()
 		print self.chunks
 		self.fill(2)
 		self.save('test')
 		self.empty()
-		self.load('test', [[3, 3, 0]])
+		self.load_chunks('test', [[3, 3, 0]])
+		self.load('test')
 
-	def load(self, filename, coords):
+	def load(self, filename):
+		path = os.path.join('save', filename + '.world')
+		if os.path.exists(path):
+			f = open(path, 'rb')
+		else:
+			raise Exception("File does not exist")
+
+		self.x, self.y, self.z = [int(f.read(16)) for i in range(3)]
+		self.chunks = self.new_chunklist()
+		for x in range(len(self.chunks)):
+			for y in range(len(self.chunks[x])):
+				for z in range(len(self.chunks[y])):
+					self.chunks[x][y][z] = self.chunk_from_bytes(f.read(self.chunksize))
+
+
+	def load_chunks(self, filename, coords):
 		#Load a list of chunks from the world file and place them in memory
-		path = 'save/' + filename + '.world'
+		path = os.path.join('save', filename + '.world')
 
 		if os.path.exists(path):
 			f = open(path, 'rb')
@@ -31,14 +48,11 @@ class World:
 			x, y, z = coordinate
 			if x >= self.x_chunks or y >= self.y_chunks or z >= self.z:
 				raise Exception("Coordinates are outside of world size")
-			chunksize = pow(self.chunksize, 2)
-			pos = x * len(self.chunks[0][0]) * len(self.chunks[0]) * chunksize + y * len(self.chunks[0][0]) * chunksize + z * chunksize + 48
+			pos = x * len(self.chunks[0][0]) * len(self.chunks[0]) * self.chunksize + y * len(self.chunks[0][0]) * chunksize + z * chunksize + 48
 			f.seek(pos)
-			bytes = f.read(chunksize)
+			bytes = f.read(self.chunksize)
 			print pos
 			print bytes
-			for byte in bytes:
-				print ord(byte)
 			self.chunks[x][y][z] = self.chunk_from_bytes(bytes)
 
 
@@ -74,6 +88,9 @@ class World:
 
 		#Write the world dimensions
 		writebuffer = ''
+
+		#It may seem excessive, but the world dimensions are 16-bit
+		#lick my balls
 		xstring = hex(self.x)[2:].zfill(32)
 		ystring = hex(self.y)[2:].zfill(32)
 		zstring = hex(self.z)[2:].zfill(32)
@@ -81,6 +98,7 @@ class World:
 		pants = writebuffer.decode('hex')
 		f.write(writebuffer.decode('hex'))
 		writebuffer = ''
+		
 		lastpos = 47
 
 		#Write out the contents of each chunk
@@ -96,7 +114,8 @@ class World:
 					print len(self.chunks[x][y])
 					'''
 					chunk = self.chunks[x][y][z]
-					#WHY NOT DATA INTEGRITY CHECK!?!?
+					
+					#WHY NOT ASSERT DATA INTEGRITY!?!?
 					pos = x * len(self.chunks[x][y]) * len(self.chunks[x]) + y * len(self.chunks[x][y]) + z + 48
 					if pos != lastpos + 1:
 						print pos
@@ -105,19 +124,19 @@ class World:
 					lastpos = pos
 
 					if chunk is not None:
-						for chunk_x in range(self.chunksize):
-							for chunk_y in range(self.chunksize):
+						for chunk_x in range(self.chunkwidth):
+							for chunk_y in range(self.chunkwidth):
 								tile_type = chunk.get(chunk_x, chunk_y).type
 								writebuffer += hex(tile_type)[2:].zfill(2)
 					elif initial:
-						writebuffer = ''.zfill(pow(self.chunksize, 2) * 2)
+						writebuffer = ''.zfill(self.chunksize * 2)
 					f.write(writebuffer.decode('hex'))
 					writebuffer = ''
 
 
 	def new_chunklist(self):
 		#rofl list comprehension
-		return [[[None for a in range(self.z)] for b in range(int(math.ceil(float(self.y) / float(self.chunksize))))] for c in range(int(math.ceil(float(self.x) / float(self.chunksize))))]
+		return [[[None for a in range(self.z)] for b in range(int(math.ceil(float(self.y) / float(self.chunkwidth))))] for c in range(int(math.ceil(float(self.x) / float(self.chunkwidth))))]
 
 	def empty(self):
 		self.chunks = self.new_chunklist()
@@ -129,10 +148,10 @@ class World:
 		pass
 
 	def get(self, x, y, z=0):
-		local_x = x % self.chunksize
-		local_y = y % self.chunksize
-		chunk_x = (x - local_x) / self.chunksize
-		chunk_y = (y - local_y) / self.chunksize
+		local_x = x % self.chunkwidth
+		local_y = y % self.chunkwidth
+		chunk_x = (x - local_x) / self.chunkwidth
+		chunk_y = (y - local_y) / self.chunkwidth
 		chunk = self.chunks[chunk_x][chunk_y][z]
 		if chunk:
 			tile = chunk.get(local_x, local_y)
@@ -142,13 +161,13 @@ class World:
 		return tile
 
 	def set(self, newtile, x, y, z=0):
-		local_x = x % self.chunksize
-		local_y = y % self.chunksize
-		chunk_x = (x - local_x) / self.chunksize
-		chunk_y = (y - local_y) / self.chunksize
+		local_x = x % self.chunkwidth
+		local_y = y % self.chunkwidth
+		chunk_x = (x - local_x) / self.chunkwidth
+		chunk_y = (y - local_y) / self.chunkwidth
 		chunk = self.chunks[chunk_x][chunk_y][z]
 		if chunk is None:
-			chunk = Chunk(self.chunksize)
+			chunk = Chunk(self.chunkwidth)
 			self.chunks[chunk_x][chunk_y][z] = chunk
 
 		chunk.set(newtile, local_x, local_y)
@@ -160,9 +179,9 @@ class World:
 					output = [x, y, z, 0]
 					#print "Writing in " + str(output)
 					mod = 0
-					self.chunks[x][y][z] = Chunk(self.chunksize)
-					for chunk_x in range(self.chunksize):
-						for chunk_y in range(self.chunksize):
+					self.chunks[x][y][z] = Chunk(self.chunkwidth)
+					for chunk_x in range(self.chunkwidth):
+						for chunk_y in range(self.chunkwidth):
 							self.chunks[x][y][z].set(Tile(output[mod]), chunk_x, chunk_y)
 							mod = (mod + 1) % 4
 
@@ -173,10 +192,10 @@ class World:
 					self.set(Tile(type), x, y, z)
 
 	def chunk_from_bytes(self, bytes):
-		chunk = Chunk(self.chunksize)
+		chunk = Chunk(self.chunkwidth)
 		for index in range(len(bytes)):
-			x = index % self.chunksize
-			y = index / self.chunksize
+			x = index % self.chunkwidth
+			y = index / self.chunkwidth
 			chunk.set(Tile(ord(bytes[index])), x, y)
 
 		return chunk

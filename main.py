@@ -58,8 +58,8 @@ bindings = ConfigParser.ConfigParser()
 bindings.read("bindings.cfg")
 controls = {}
 for binding in bindings.items('bindings'):
-    #Add a Control object with Control.action = Action_actionname, to the dictionary of bound controls
-    controls[getattr(pygame, binding[0].upper())] = Control(getattr(actions, "Action_%s" % binding[1])())
+    #Add a Control object with Control.action = actionname, to the dictionary of bound controls
+    controls[getattr(pygame, binding[0].upper())] = Control(getattr(actions, binding[1])())
 
 
 #Load tile images
