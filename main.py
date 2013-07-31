@@ -5,6 +5,7 @@ import player as Player
 #import player as Player
 import ConfigParser
 from controls import Control
+from math import floor
 import actions
 import os
 
@@ -28,18 +29,26 @@ def time():
 
 def render():
     #Render the scene
+    xtiles = windowx / tilewidth
+    ytiles = windowy / tilewidth
+    for x in range(xtiles):
+        for y in range(ytiles):
+            tile = world.get(int(floor(player.x + x - xtiles/2)), int(floor(player.y + y - ytiles/2)))
+            screen.blit(tile_images[tile.type], (x*tilewidth, y*tilewidth))
+    '''
     for y in range(int(config.get('world', 'y'))):
         for x in range(int(config.get('world', 'x'))):
             tile = world.get(x, y)
             #tile = world.tiles[x][y]
             if tile is not None:
                 screen.blit(tile_images[tile.type], (x*tilewidth, y*tilewidth))
+    '''
 
     pygame.display.flip()
 
 config = ConfigParser.ConfigParser()
 config.read("settings.cfg")
-player = Player.Player([1, 1, 1])
+player = Player.Player([5, 5, 0])
 
 '''
 window = etc.Window()

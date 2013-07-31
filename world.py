@@ -18,7 +18,7 @@ class World:
 		self.save('test')
 		self.empty()
 		self.load_chunks('test', [[3, 3, 0]])
-		self.load('test')
+		#self.load('test')
 
 	def load(self, filename):
 		path = os.path.join('save', filename + '.world')
@@ -27,7 +27,8 @@ class World:
 		else:
 			raise Exception("File does not exist")
 
-		self.x, self.y, self.z = [int(f.read(16)) for i in range(3)]
+		self.x, self.y, self.z = [int(f.read(16).encode('hex'), 16) for i in range(3)]
+
 		self.chunks = self.new_chunklist()
 		for x in range(len(self.chunks)):
 			for y in range(len(self.chunks[x])):
@@ -48,7 +49,7 @@ class World:
 			x, y, z = coordinate
 			if x >= self.x_chunks or y >= self.y_chunks or z >= self.z:
 				raise Exception("Coordinates are outside of world size")
-			pos = x * len(self.chunks[0][0]) * len(self.chunks[0]) * self.chunksize + y * len(self.chunks[0][0]) * chunksize + z * chunksize + 48
+			pos = x * len(self.chunks[0][0]) * len(self.chunks[0]) * self.chunksize + y * len(self.chunks[0][0]) * self.chunksize + z * self.chunksize + 48
 			f.seek(pos)
 			bytes = f.read(self.chunksize)
 			print pos
@@ -152,7 +153,11 @@ class World:
 		local_y = y % self.chunkwidth
 		chunk_x = (x - local_x) / self.chunkwidth
 		chunk_y = (y - local_y) / self.chunkwidth
-		chunk = self.chunks[chunk_x][chunk_y][z]
+		try:
+			chunk = self.chunks[chunk_x][chunk_y][z]
+		except IndexError:
+			"WARNING: Attempted to get tile that was outside the map. Returning grass"
+			return Tile(1)
 		if chunk:
 			tile = chunk.get(local_x, local_y)
 		else:
@@ -201,8 +206,8 @@ class World:
 		return chunk
 
 class Chunk:
-	def __init__(self, chunksize):
-		self.tiles = [[Tile(1) for y in range(chunksize)] for x in range(chunksize)]
+	def __init__(self, chunkwidth):
+		self.tiles = [[Tile(1) for y in range(chunkwidth)] for x in range(chunkwidth)]
 
 	def get(self, x, y):
 		return self.tiles[x][y]
