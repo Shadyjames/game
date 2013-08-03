@@ -18,7 +18,7 @@ class World:
 		self.save('test')
 		self.empty()
 		self.load_chunks('test', [[3, 3, 0]])
-		#self.load('test')
+		self.load('test')
 
 	def load(self, filename):
 		path = os.path.join('save', filename + '.world')
@@ -156,7 +156,7 @@ class World:
 		try:
 			chunk = self.chunks[chunk_x][chunk_y][z]
 		except IndexError:
-			"WARNING: Attempted to get tile that was outside the map. Returning grass"
+			#print "WARNING: Attempted to get tile that was outside the map. Returning grass"
 			return Tile(1)
 		if chunk:
 			tile = chunk.get(local_x, local_y)

@@ -12,10 +12,10 @@ import os
 def do_input():
     keypresses = pygame.key.get_pressed()
     for c in controls:
-        print c
-        controls[c].update(keypresses[c])
+        controls[c].update(keypresses[c], world=world, player=player, config=config)
 
 def translate():
+    player.update()
     #Move everything
     pass
 
@@ -31,10 +31,10 @@ def render():
     #Render the scene
     xtiles = windowx / tilewidth
     ytiles = windowy / tilewidth
-    for x in range(xtiles):
-        for y in range(ytiles):
+    for x in range(xtiles + 1):
+        for y in range(ytiles + 1):
             tile = world.get(int(floor(player.x + x - xtiles/2)), int(floor(player.y + y - ytiles/2)))
-            screen.blit(tile_images[tile.type], (x*tilewidth, y*tilewidth))
+            screen.blit(tile_images[tile.type], ((x - player.x % 1)*tilewidth, (y - player.y % 1)*tilewidth))
     '''
     for y in range(int(config.get('world', 'y'))):
         for x in range(int(config.get('world', 'x'))):
@@ -48,7 +48,7 @@ def render():
 
 config = ConfigParser.ConfigParser()
 config.read("settings.cfg")
-player = Player.Player([5, 5, 0])
+player = Player.Player([20, 12, 0], config)
 
 '''
 window = etc.Window()
@@ -64,11 +64,12 @@ world = World.World(int(config.get('world', 'x')), int(config.get('world', 'y'))
 
 #Load control bindings
 bindings = ConfigParser.ConfigParser()
+bindings.optionxform = str
 bindings.read("bindings.cfg")
 controls = {}
 for binding in bindings.items('bindings'):
     #Add a Control object with Control.action = actionname, to the dictionary of bound controls
-    controls[getattr(pygame, binding[0].upper())] = Control(getattr(actions, binding[1])())
+    controls[getattr(pygame, binding[0])] = Control(getattr(actions, binding[1])())
 
 
 #Load tile images
@@ -80,7 +81,7 @@ for i in files:
         tile_images[int(i[:-4])] = pygame.image.load("assets/images/" + i)
 
 while running:
-    print("WOOT SDFHJSDGJHDFJKAHGHJASFCD VASFCV DGB")
+    #print("WOOT SDFHJSDGJHDFJKAHGHJASFCD VASFCV DGB")
     event = pygame.event.poll()
     if event.type == pygame.QUIT:
         running = False
