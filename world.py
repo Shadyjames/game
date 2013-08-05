@@ -15,7 +15,9 @@ class World:
         self.chunks = self.new_chunklist()
         print self.chunks
         self.fill(2)
+        #self.coordinate_fill()
         self.save('test')
+        self.save_chunks('test', [[3, 3, 0]])
         self.empty()
         self.load_chunks('test', [[3, 3, 0]])
         self.load('test')
@@ -52,8 +54,6 @@ class World:
             pos = x * len(self.chunks[0][0]) * len(self.chunks[0]) * self.chunksize + y * len(self.chunks[0][0]) * self.chunksize + z * self.chunksize + 48
             f.seek(pos)
             bytes = f.read(self.chunksize)
-            print pos
-            print bytes
             self.chunks[x][y][z] = self.chunk_from_bytes(bytes)
 
 
@@ -125,15 +125,22 @@ class World:
                     lastpos = pos
 
                     if chunk is not None:
-                        for chunk_x in range(self.chunkwidth):
-                            for chunk_y in range(self.chunkwidth):
-                                tile_type = chunk.get(chunk_x, chunk_y).type
-                                writebuffer += hex(tile_type)[2:].zfill(2)
+                        writebuffer += self.bytes_from_chunk(chunk)
                     elif initial:
                         writebuffer = ''.zfill(self.chunksize * 2)
                     f.write(writebuffer.decode('hex'))
                     writebuffer = ''
 
+    #This should only ever be called when a full savefile has already been created with save()
+    def save_chunks(self, filename, chunks):
+        savepath = os.path.join('save', filename + ".world")
+        f = open(savepath, 'r+b')
+        for chunk in chunks:
+            x, y, z = chunk
+            pos = (x * len(self.chunks[x][y]) * len(self.chunks[x]) + y * len(self.chunks[x][y]) + z) * self.chunksize + 48
+            f.seek(pos)
+            bytes = self.bytes_from_chunk(self.chunks[x][y][z])
+            f.write(bytes.decode('hex'))
 
     def new_chunklist(self):
         #rofl list comprehension
@@ -202,8 +209,15 @@ class World:
             x = index % self.chunkwidth
             y = index / self.chunkwidth
             chunk.set(Tile(ord(bytes[index])), x, y)
-
         return chunk
+
+    def bytes_from_chunk(self, chunk):
+        bytes = ''
+        for chunk_x in range(self.chunkwidth):
+            for chunk_y in range(self.chunkwidth):
+                tile_type = chunk.get(chunk_x, chunk_y).type
+                bytes += hex(tile_type)[2:].zfill(2)
+        return bytes
 
 class Chunk:
     def __init__(self, chunkwidth):
