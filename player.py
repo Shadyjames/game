@@ -19,29 +19,38 @@ class Player:
         #self.movestates has TOO MANY LETTERS IN IT
         a = self.movestates
 
-        print a
         assert (not a[0] and not a[1]) or (a[0] != a[1])
         assert (not a[2] and not a[3]) or (a[2] != a[3])
 
+        print self.speed
         if (a[0] or a[1]) and (a[2] or a[3]):
             print "DIAGONAL MOTHERFUCKERS"
             #We are travelling diagonally
+            xdelta = self.diagspeed - abs(self.speed[X]) 
+            xdelta = 0 if xdelta < 0 else xdelta
+            ydelta = self.diagspeed - abs(self.speed[Y]) 
+            ydelta = 0 if ydelta < 0 else ydelta
             if a[0]:
-                self.speed[X] -= abs(abs(self.speed[X]) - self.diagspeed) * self.accel
+                self.speed[X] -= xdelta * self.accel
             else:
-                self.speed[X] += abs(abs(self.speed[X]) - self.diagspeed) * self.accel
+                self.speed[X] += xdelta * self.accel
             if a[2]:
-                self.speed[Y] -= abs(abs(self.speed[Y]) - self.diagspeed) * self.accel
+                self.speed[Y] -= ydelta * self.accel
             else:
-                self.speed[Y] += abs(abs(self.speed[Y]) - self.diagspeed) * self.accel
-        elif a[0]:
-            self.speed[X] -= abs(abs(self.speed[X]) - self.maxspeed) * self.accel
-        elif a[1]:
-            self.speed[X] += abs(abs(self.speed[X]) - self.maxspeed) * self.accel
-        elif a[2]:
-            self.speed[Y] -= abs(abs(self.speed[Y]) - self.maxspeed) * self.accel
-        elif a[3]:
-            self.speed[Y] += abs(abs(self.speed[Y]) - self.maxspeed) * self.accel
+                self.speed[Y] += ydelta * self.accel
+        else:
+            xdelta = self.maxspeed - abs(self.speed[X]) 
+            xdelta = 0 if xdelta < 0 else xdelta
+            ydelta = self.maxspeed - abs(self.speed[Y]) 
+            ydelta = 0 if ydelta < 0 else ydelta
+            if a[0]:
+                self.speed[X] -= xdelta * self.accel
+            elif a[1]:
+                self.speed[X] += xdelta * self.accel
+            elif a[2]:
+                self.speed[Y] -= ydelta * self.accel
+            elif a[3]:
+                self.speed[Y] += ydelta * self.accel
         self.position = [self.position[i] + self.speed[i] for i in range(3)]
 
         #Apply friction

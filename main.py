@@ -11,8 +11,8 @@ import os
 
 def do_input():
     keypresses = pygame.key.get_pressed()
-    for c in controls:
-        controls[c].update(keypresses[c], world=world, player=player, config=config)
+    for key, control in controls.iteritems():
+        control.update(keypresses[key], world=world, player=player, config=config)
 
 def translate():
     player.update()
@@ -35,15 +35,6 @@ def render():
         for y in range(ytiles + 1):
             tile = world.get(int(floor(player.x + x - xtiles/2)), int(floor(player.y + y - ytiles/2)))
             screen.blit(tile_images[tile.type], ((x - player.x % 1)*tilewidth, (y - player.y % 1)*tilewidth))
-    '''
-    for y in range(int(config.get('world', 'y'))):
-        for x in range(int(config.get('world', 'x'))):
-            tile = world.get(x, y)
-            #tile = world.tiles[x][y]
-            if tile is not None:
-                screen.blit(tile_images[tile.type], (x*tilewidth, y*tilewidth))
-    '''
-
     pygame.display.flip()
 
 config = ConfigParser.ConfigParser()
@@ -59,7 +50,7 @@ tilewidth = 32
 screen = pygame.display.set_mode((windowx, windowy))
 running = True
 
-world = World.World(int(config.get('world', 'x')), int(config.get('world', 'y')), 10)
+world = World.World(x=int(config.get('world', 'x')), y=int(config.get('world', 'y')), z=10)
 #world.load()
 
 #Load control bindings
@@ -74,11 +65,15 @@ for binding in bindings.items('bindings'):
 
 #Load tile images
 tile_images = {}
+other_images = {}
 print os.listdir(".")
 files = os.listdir("assets/images")
 for i in files:
     if i[-4:] == ".jpg":
-        tile_images[int(i[:-4])] = pygame.image.load("assets/images/" + i)
+        try:
+            tile_images[int(i[:-4])] = pygame.image.load("assets/images/" + i).convert(32)
+        except:
+            other_images[i[:-4]] = pygame.image.load("assets/images/" + i).convert(32)
 
 while running:
     #print("WOOT SDFHJSDGJHDFJKAHGHJASFCD VASFCV DGB")

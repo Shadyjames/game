@@ -4,7 +4,7 @@ import os
 import sys
 
 class World:
-    def __init__(self, x, y, z, chunksize=3):
+    def __init__(self, x=10, y=10, z=10, chunksize=3):
         self.x = x
         self.y = y
         self.z = z
@@ -13,14 +13,15 @@ class World:
         self.chunkwidth = chunksize
         self.chunksize = pow(self.chunkwidth, 2)
         self.chunks = self.new_chunklist()
-        print self.chunks
         self.fill(2)
         #self.coordinate_fill()
+        '''
         self.save('test')
         self.save_chunks('test', [[3, 3, 0]])
         self.empty()
         self.load_chunks('test', [[3, 3, 0]])
         self.load('test')
+        '''
 
     def load(self, filename):
         path = os.path.join('save', filename + '.world')
@@ -161,10 +162,12 @@ class World:
         chunk_x = (x - local_x) / self.chunkwidth
         chunk_y = (y - local_y) / self.chunkwidth
         try:
+            if not (chunk_x >= 0 and chunk_y >= 0 and z >= 0):
+                raise IndexError
             chunk = self.chunks[chunk_x][chunk_y][z]
         except IndexError:
             #print "WARNING: Attempted to get tile that was outside the map. Returning grass"
-            return Tile(1)
+            return Tile(0)
         if chunk:
             tile = chunk.get(local_x, local_y)
         else:
@@ -221,7 +224,7 @@ class World:
 
 class Chunk:
     def __init__(self, chunkwidth):
-        self.tiles = [[Tile(1) for y in range(chunkwidth)] for x in range(chunkwidth)]
+        self.tiles = [[Tile(0) for y in range(chunkwidth)] for x in range(chunkwidth)]
 
     def get(self, x, y):
         return self.tiles[x][y]

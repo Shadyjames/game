@@ -15,5 +15,5 @@ class Control:
             self.action.go('up', **kwargs)
         elif state == True:
             self.action.go('held', **kwargs)
-        self.time_to_ready  = self.action.cooldown
+        self.time_to_ready  = getattr(self.action, 'cooldown', 0)
         self.state = state
