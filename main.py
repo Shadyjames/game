@@ -17,6 +17,7 @@ def do_input():
 def translate():
     player.update()
     #Move everything
+    #dicks
     pass
 
 def collide():
