@@ -1,5 +1,6 @@
 #Main file for mah game.
 import pygame
+import time
 import world as World
 import player as Player
 #import player as Player
@@ -8,6 +9,8 @@ from controls import Control
 from math import floor
 import actions
 import os
+
+last_time = time.clock()
 
 def do_input():
     keypresses = pygame.key.get_pressed()
@@ -24,9 +27,11 @@ def collide():
     #Check projectiles for collisions
     pass
 
-def time():
+def timer():
     #Check timed objects against the global timer
-    pass
+    global last_time
+    print str(1.0 / (time.clock() - last_time)) + " FPS"
+    last_time = time.clock()
 
 def render():
     #Render the scene
@@ -49,10 +54,14 @@ windowx = int(config.get('window', 'x'))
 windowy = int(config.get('window', 'y'))
 tilewidth = 32
 screen = pygame.display.set_mode((windowx, windowy))
+#This cannot be done until display is initialised
+from render import ScreenRegion, draw_world
+
 running = True
 
 world = World.World(x=int(config.get('world', 'x')), y=int(config.get('world', 'y')), z=10)
 #world.load()
+
 
 #Load control bindings
 bindings = ConfigParser.ConfigParser()
@@ -76,16 +85,19 @@ for i in files:
         except:
             other_images[i[:-4]] = pygame.image.load("assets/images/" + i).convert(32)
 
+
 while running:
     #print("WOOT SDFHJSDGJHDFJKAHGHJASFCD VASFCV DGB")
     event = pygame.event.poll()
     if event.type == pygame.QUIT:
         running = False
 
+    draw_world(world, player, screen, (45, 45, 640, 480), crop=True)
+    pygame.display.flip()
     do_input()
     translate()
+    timer()
     collide()
-    time()
-    render()
+    #render()
     
 pygame.quit()

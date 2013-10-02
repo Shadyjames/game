@@ -22,7 +22,6 @@ class Player:
         assert (not a[0] and not a[1]) or (a[0] != a[1])
         assert (not a[2] and not a[3]) or (a[2] != a[3])
 
-        print self.speed
         if (a[0] or a[1]) and (a[2] or a[3]):
             print "DIAGONAL MOTHERFUCKERS"
             #We are travelling diagonally
