@@ -22,6 +22,7 @@ side_panel_width = 0.3
 windowx = int(config.get('window', 'x'))
 windowy = int(config.get('window', 'y'))
 tilewidth = 32
+layers = 5
 screen = pygame.display.set_mode((windowx, windowy))
 
 #This cannot be done until display is initialised
@@ -35,13 +36,37 @@ drag_start = None
 class WorldRegion(ScreenRegion):
     def __init__(self, image, rect, layer, worldnum):
         self.last_mpos = None
+        self.world_drag_start = None
         self.world = worldnum
         ScreenRegion.__init__(self, image, rect, layer)
 
     def draw(self, screen):
         draw_world(worlds[self.world], cameras[self.world], screen, self.rect, True)
 
-#NO TOUCHIE
+        if self.world_drag_start is not None:
+            #Draw the selection area
+            start_pos = self.coords_to_pos(self.world_drag_start)
+            grid_mpos = self.coords_to_pos(self.world_drag_end)
+            rect = [
+                    grid_mpos[0] if grid_mpos[0] < start_pos[0] else start_pos[0],
+                    grid_mpos[1] if grid_mpos[1] < start_pos[1] else start_pos[1],
+                    abs(grid_mpos[0] - start_pos[0]) + tilewidth,
+                    abs(grid_mpos[1] - start_pos[1]) + tilewidth
+                   ]
+
+            rect[0] = self.rect[0] if rect[0] < self.rect[0] else rect[0]
+            rect[1] = self.rect[1] if rect[1] < self.rect[1] else rect[1]
+            rect[2] = self.rect[0] + self.rect[2] - rect[0] if rect[0] + rect[2] > self.rect[0] + self.rect[2] else rect[2]
+            rect[3] = self.rect[1] + self.rect[3] - rect[1] if rect[1] + rect[3] > self.rect[1] + self.rect[3] else rect[3]
+            
+            selection_area = pygame.Surface(rect[2:])
+            selection_area.fill((0, 0, 255))
+            selection_area.set_alpha(100)
+            screen.blit(selection_area, rect[:2])#(xorig, yorig))
+            
+
+    #NO TOUCHIE
+    """
     def pos_to_coords(self, pos):
         return (int((pos[0] + cameras[self.world].x * tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
                 int((pos[1] + cameras[self.world].y * tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
@@ -49,6 +74,16 @@ class WorldRegion(ScreenRegion):
     def coords_to_pos(self, coords):
         return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - cameras[self.world].x * tilewidth,
                 (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - cameras[self.world].y * tilewidth)
+    """
+
+    #Wooh arithmetic
+    def pos_to_coords(self, pos):
+        return (int((pos[0] + cameras[self.world].x * tilewidth - self.rect[0] % tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
+                int((pos[1] + cameras[self.world].y * tilewidth - self.rect[1] % tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
+
+    def coords_to_pos(self, coords):
+        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - cameras[self.world].x * tilewidth + self.rect[0] % tilewidth,
+                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - cameras[self.world].y * tilewidth + self.rect[1] % tilewidth)
 
     def PanWorld(self, button_string, button_event, mpos):
         global last_mpos, last_frame_time
@@ -59,8 +94,6 @@ class WorldRegion(ScreenRegion):
             delta = [(last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
             #No dragging for vertical
             delta.append(0)
-            #print "Drag in progress; delta is " + repr(delta)
-            #print cameras[world].position
             cameras[self.world].position = [cameras[self.world].position[i] + delta[i] for i in range(3)]
             last_mpos = mpos
             
@@ -70,39 +103,14 @@ class WorldRegion(ScreenRegion):
             last_frame_time = frame_time
 
     def ClickTile(self, button_string, button_event, mpos):
-        global drag_start
-
-        #Find the grid alignment offset created by player position mod 1
-        player_xoffset = (cameras[self.world].x % 1) * tilewidth
-        player_yoffset = (cameras[self.world].y % 1) * tilewidth
-
         #Set selection to region between drag start and finish
         if button_event == "down":
-            ##THIS WORKS AND IS MAGIC
             self.world_drag_start = self.pos_to_coords(mpos)
+            self.world_drag_end = self.pos_to_coords(mpos)
             print self.world_drag_start
-        elif button_event == "held":
-            #rect = drag_start + (mpos[0] - drag_start[0], mpos[1] - drag_start[1])
-            #pygame.draw.rect(screen, (0, 100, 255), rect, 2)
-
-            start_pos = self.coords_to_pos(self.world_drag_start)
-            grid_mpos = self.coords_to_pos(self.pos_to_coords(mpos))
-
-            rect = [
-                    grid_mpos[0] if grid_mpos[0] < start_pos[0] else start_pos[0],
-                    grid_mpos[1] if grid_mpos[1] < start_pos[1] else start_pos[1],
-                    abs(grid_mpos[0] - start_pos[0]) + tilewidth,
-                    abs(grid_mpos[1] - start_pos[1]) + tilewidth
-                   ]
-
-            selection_area = pygame.Surface(rect[2:])
-            selection_area.fill((0, 255, 0))
-            selection_area.set_alpha(100)
-            screen.blit(selection_area, rect[:2])#(xorig, yorig))
         else:
-            #Set selection area for this world
-            pass
-
+            self.world_drag_end = self.pos_to_coords(mpos)
+            active_world = self.world
 
 #on-click event callbacks
 #The args are specified on adding the event
@@ -137,39 +145,19 @@ def PanWorld(world,  button_event=None, mpos=None, **kwargs):
 
 def do_input():
     keypresses = pygame.key.get_pressed()
-    for key, control in controls.iteritems():
-        control.update(keypresses[key], worlds=worlds, cameras=cameras, config=config)
-
+    total_keys = len(keypresses)
     mpresses = pygame.mouse.get_pressed()
-    mpos = pygame.mouse.get_pos()[:]
-    for i in range(len(mpresses)):
-        index = i+1
-        if index in mcontrols:
-            mcontrols[index].update(mpresses[i], 
-                                    button_num=i+1,
-                                    worlds=worlds, 
-                                    cameras=cameras, 
-                                    config=config, 
-                                    screenregions=screenregions,
-                                    mpos=mpos)
-
-
-def render():
-    #Render the scene
-    '''
-    xtiles = windowx / tilewidth
-    ytiles = windowy / tilewidth
-    for x in range(xtiles + 1):
-        for y in range(ytiles + 1):
-            tile = world.get(int(floor(player.x + x - xtiles/2)), int(floor(player.y + y - ytiles/2)))
-            screen.blit(tile_images[tile.type], ((x - player.x % 1)*tilewidth, (y - player.y % 1)*tilewidth))
-    '''
-
-    for region in screenregions:
-        if hasattr(region, 'image') and region.image:
-            screen.blit(region.image, region.location)
-
-
+    mpos = pygame.mouse.get_pos()
+    keypresses = keypresses + tuple([mpresses[i] for i in range(len(mpresses))])
+    for keys, control in controls.iteritems():
+        ##TODO
+        control.update( all([keypresses[key] for key in keys]), 
+                        keys=keys,
+                        worlds=worlds, 
+                        cameras=cameras, 
+                        config=config, 
+                        screenregions=screenregions,
+                        mpos=mpos)
 
 def draw():
     layer = 0
@@ -221,8 +209,15 @@ def draw():
     layer = 3
 
 def redraw():
-    for region in screenregions:
-        region.draw(screen)
+    tempregions = screenregions[:]
+    for layer in range(layers):
+        i = 0
+        while i < len(tempregions):
+            if tempregions[i].layer == layer:
+                tempregions[i].draw(screen)
+                poppedregion = tempregions.pop(i)
+            else:
+                i += 1
 
 
 if __name__ == "__main__":
@@ -249,13 +244,18 @@ if __name__ == "__main__":
     bindings.optionxform = str
     bindings.read("bindings.cfg")
     controls = {}
-    mcontrols = {}
     for binding in bindings.items('editor_bindings'):
         #Add a Control object with Control.action = actionname, to the dictionary of bound controls
-        if binding[0].startswith('K_'):
-            controls[getattr(pygame, binding[0])] = Control(getattr(editor_actions, binding[1])())
-        elif binding[0].startswith('MBUTTON_'):
-            mcontrols[int(binding[0].partition('_')[2])] = Control(getattr(editor_actions, binding[1])())
+        keys = []
+        for item in binding[0].split('+'):
+            if item.startswith('K_'):
+                keys.append(getattr(pygame, item))
+            elif item.startswith('MBUTTON_'):
+                #we treat mouse buttons as keys. Don't know why thats so much to ask.
+                keys.append(int(item[-1]) + len(pygame.key.get_pressed()) - 1) 
+        keys = tuple(keys)
+        print keys
+        controls[keys] = Control(getattr(editor_actions, binding[1])())
 
     screenregions = []
     worlds[0].load(worldname)
