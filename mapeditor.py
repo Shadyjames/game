@@ -29,6 +29,7 @@ screen = pygame.display.set_mode((windowx, windowy))
 from render import ScreenRegion, draw_world
 
 #Globals for mouse actions that persist between frames
+active_world = 0
 last_mpos = None
 last_frame_time = None
 drag_start = None
@@ -36,33 +37,46 @@ drag_start = None
 class WorldRegion(ScreenRegion):
     def __init__(self, image, rect, layer, worldnum):
         self.last_mpos = None
-        self.world_drag_start = None
-        self.world = worldnum
+        self.world = worlds[worldnum]
+        self.world.selection_start = None
+        self.world.selection_end = None
+        self.worldnum = worldnum
+        self.camera = cameras[worldnum]
         ScreenRegion.__init__(self, image, rect, layer)
 
     def draw(self, screen):
-        draw_world(worlds[self.world], cameras[self.world], screen, self.rect, True)
+        draw_world(self.world, self.camera, screen, self.rect, True)
 
-        if self.world_drag_start is not None:
+        if self.world.selection_start is not None:
             #Draw the selection area
-            start_pos = self.coords_to_pos(self.world_drag_start)
-            grid_mpos = self.coords_to_pos(self.world_drag_end)
+            start_pos = self.coords_to_pos(self.world.selection_start)
+            end_mpos = self.coords_to_pos(self.world.selection_end)
             rect = [
-                    grid_mpos[0] if grid_mpos[0] < start_pos[0] else start_pos[0],
-                    grid_mpos[1] if grid_mpos[1] < start_pos[1] else start_pos[1],
-                    abs(grid_mpos[0] - start_pos[0]) + tilewidth,
-                    abs(grid_mpos[1] - start_pos[1]) + tilewidth
+                    end_mpos[0] if end_mpos[0] < start_pos[0] else start_pos[0],
+                    end_mpos[1] if end_mpos[1] < start_pos[1] else start_pos[1],
+                    abs(end_mpos[0] - start_pos[0]) + tilewidth,
+                    abs(end_mpos[1] - start_pos[1]) + tilewidth
                    ]
 
-            rect[0] = self.rect[0] if rect[0] < self.rect[0] else rect[0]
-            rect[1] = self.rect[1] if rect[1] < self.rect[1] else rect[1]
+            local_x = rect[0] - self.rect[0]
+            local_y = rect[1] - self.rect[1]
+            if local_x < 0:
+                #for coordinates that land outside, set it to the edge of the draw area
+                rect[0] = self.rect[0]
+                #Reduce width to compensate
+                rect[2] += local_x
+            if local_y < 0:
+                rect[1] = self.rect[1]
+                rect[3] += local_y
+
             rect[2] = self.rect[0] + self.rect[2] - rect[0] if rect[0] + rect[2] > self.rect[0] + self.rect[2] else rect[2]
             rect[3] = self.rect[1] + self.rect[3] - rect[1] if rect[1] + rect[3] > self.rect[1] + self.rect[3] else rect[3]
-            
-            selection_area = pygame.Surface(rect[2:])
-            selection_area.fill((0, 0, 255))
-            selection_area.set_alpha(100)
-            screen.blit(selection_area, rect[:2])#(xorig, yorig))
+
+            if rect[2] and rect[3]:
+                selection_area = pygame.Surface(rect[2:])
+                selection_area.fill((0, 0, 255))
+                selection_area.set_alpha(100)
+                screen.blit(selection_area, rect[:2])#(xorig, yorig))
             
 
     #NO TOUCHIE
@@ -78,70 +92,40 @@ class WorldRegion(ScreenRegion):
 
     #Wooh arithmetic
     def pos_to_coords(self, pos):
-        return (int((pos[0] + cameras[self.world].x * tilewidth - self.rect[0] % tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
-                int((pos[1] + cameras[self.world].y * tilewidth - self.rect[1] % tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
+        return (int((pos[0] + cameras[self.worldnum].x * tilewidth - self.rect[0] % tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
+                int((pos[1] + cameras[self.worldnum].y * tilewidth - self.rect[1] % tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
 
     def coords_to_pos(self, coords):
-        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - cameras[self.world].x * tilewidth + self.rect[0] % tilewidth,
-                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - cameras[self.world].y * tilewidth + self.rect[1] % tilewidth)
+        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - cameras[self.worldnum].x * tilewidth + self.rect[0] % tilewidth,
+                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - cameras[self.worldnum].y * tilewidth + self.rect[1] % tilewidth)
 
     def PanWorld(self, button_string, button_event, mpos):
         global last_mpos, last_frame_time
         if button_event == "down":
-            last_mpos = mpos
+            self.last_mpos = mpos
             last_frame_time = time.clock()
         else:
-            delta = [(last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
+            delta = [(self.last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
+            #print delta
             #No dragging for vertical
             delta.append(0)
-            cameras[self.world].position = [cameras[self.world].position[i] + delta[i] for i in range(3)]
-            last_mpos = mpos
+            cameras[self.worldnum].position = [cameras[self.worldnum].position[i] + delta[i] for i in range(3)]
+            #print cameras[self.worldnum].position
+            self.last_mpos = mpos
             
             frame_time = time.clock()
-            #if frame_time - frame_time % 0.1 != last_frame_time - last_frame_time % 0.05:
+            #if frame_time - frame_time % 0.1 != last_frame_time - last_frame_time_time % 0.05:
             #    redraw()
             last_frame_time = frame_time
 
     def ClickTile(self, button_string, button_event, mpos):
         #Set selection to region between drag start and finish
         if button_event == "down":
-            self.world_drag_start = self.pos_to_coords(mpos)
-            self.world_drag_end = self.pos_to_coords(mpos)
-            print self.world_drag_start
+            self.world.selection_start = self.pos_to_coords(mpos)
+            self.world.selection_end = self.pos_to_coords(mpos)
         else:
-            self.world_drag_end = self.pos_to_coords(mpos)
-            active_world = self.world
-
-#on-click event callbacks
-#The args are specified on adding the event
-#and kwargs passed in from the Activate Action. (button_event, mpos)
-def ClickTile(location, world, **kwargs):
-    print "Tile at %s in world %d was clicked" % (str(location), world)
-
-def PanWorld(world,  button_event=None, mpos=None, **kwargs):
-    print world
-    if button_event == 'down':
-        global last_mpos
-        last_mpos = mpos
-        global last_frame_time 
-        last_frame_time = time.clock()
-        print "Drag started"
-    else:
-        delta = [(last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
-        #No dragging for vertical
-        delta.append(0)
-        #print "Drag in progress; delta is " + repr(delta)
-        #print cameras[world].position
-        cameras[world].position = [cameras[world].position[i] + delta[i] for i in range(3)]
-        last_mpos = mpos
-        #redraw()
-
-        frame_time = time.clock()
-        #print frame_time
-        #print frame_time - last_frame_time
-        if frame_time - frame_time % 0.1 != last_frame_time - last_frame_time % 0.1:
-            redraw()
-        last_frame_time = frame_time
+            self.world.selection_end = self.pos_to_coords(mpos)
+            active_world = self.worldnum
 
 def do_input():
     keypresses = pygame.key.get_pressed()
@@ -154,6 +138,7 @@ def do_input():
         control.update( all([keypresses[key] for key in keys]), 
                         keys=keys,
                         worlds=worlds, 
+                        active_world=active_world,
                         cameras=cameras, 
                         config=config, 
                         screenregions=screenregions,
@@ -170,7 +155,6 @@ def draw():
     map_region = WorldRegion(None, map_rect, layer, worldnum)
     map_region.addEvent('MBUTTON_1', map_region.ClickTile)
     map_region.addEvent('MBUTTON_3', map_region.PanWorld)
-    map_region.world = worldnum
     screenregions.append(map_region)
 
     #Render world 1 to the corner
@@ -182,7 +166,6 @@ def draw():
     map_region = WorldRegion(None, map_rect, layer, worldnum)
     map_region.addEvent('MBUTTON_1', map_region.ClickTile)
     map_region.addEvent('MBUTTON_3', map_region.PanWorld)
-    map_region.world = worldnum
     screenregions.append(map_region)
     #Render sidebars    
     #Bottom panel
@@ -225,7 +208,10 @@ if __name__ == "__main__":
 
     running = True
 
-    worlds = [World.World(), World.World()]
+    #First two worlds are the ones you see on the screen, third is copy buffer
+    worlds = [World.World(worldnum = 0),
+              World.World(worldnum = 1),
+              World.World(worldnum = 2)]
 
     #Load tile images
     tile_images = {}

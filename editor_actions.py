@@ -6,9 +6,6 @@ class Quit:
     def go(self, key_event, **kwargs):
         sys.exit()
 
-#Its unnecessary to do this location detection shit every time we do a pan
-#It would be much more efficient to have a different action, that simply determins
-#which world to pan, if any, via whether we're greater or less than a 0.7 * xpixels, or whatever
 class LeftActivate:
     def go(self, button_event, screenregions=None, mpos=None, **kwargs):
         event = "MBUTTON_1"
@@ -35,5 +32,6 @@ class MemorySummary:
         tr.print_diff()
 
 class Copy:
-    def go(self, key_event, **kwargs):
-        print "Dicks!"
+    def go(self, key_event, worlds, active_world, rect, **kwargs):
+        copy_buffer = worlds[active_world].copy_selected(rect)
+        worlds[-1] = copy_buffer

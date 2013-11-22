@@ -1,18 +1,20 @@
-from math import floor
+from math import floor, ceil
 import math
 import os
 import sys
+tilewidth = 32
 
 class World:
-    def __init__(self, x=10, y=10, z=10, chunksize=3):
+    def __init__(self, x=10, y=10, z=10, chunkwidth=3, worldnum=None):
         self.x = x
         self.y = y
         self.z = z
-        self.x_chunks = x/chunksize
-        self.y_chunks = y/chunksize
-        self.chunkwidth = chunksize
+        self.x_chunks = x/chunkwidth
+        self.y_chunks = y/chunkwidth
+        self.chunkwidth = chunkwidth
         self.chunksize = pow(self.chunkwidth, 2)
         self.chunks = self.new_chunklist()
+        self.worldnum = worldnum
         self.fill(2)
         #self.coordinate_fill()
         '''
@@ -221,6 +223,60 @@ class World:
                 tile_type = chunk.get(chunk_x, chunk_y).type
                 bytes += hex(tile_type)[2:].zfill(2)
         return bytes
+
+    #Returns a flat region of a world. Avoids chunk lookup calculations used in get()
+    def get_rect(self, rect, z):
+        xorig, yorig, w, h = rect
+        #print rect
+        chunks_involved = [[None for y in range(int(ceil(float(h + yorig % self.chunkwidth) / self.chunkwidth)))] for x in range(int(ceil(float(w + xorig % self.chunkwidth) / self.chunkwidth)))]
+        #print "chunks_involved dimensions: %s, %s" % (len(chunks_involved), len(chunks_involved[0]))
+        #print rect
+        region = [[] for x in range(w)]
+        for x in range(len(chunks_involved)):
+            for y in range(len(chunks_involved[0])):
+                xindex = x + xorig/self.chunkwidth
+                yindex = y + yorig/self.chunkwidth
+                if xindex < 0 or yindex < 0 or xindex >= len(self.chunks) or yindex >= len(self.chunks[xindex]):
+                    chunks_involved[x][y] = None
+                else:
+                    chunks_involved[x][y] = self.chunks[xindex][yindex][z]
+
+
+        #print chunks_involved
+        region = [[] for x in range(w)]
+        for x in range(w):
+            x_chunk = (x + xorig % self.chunkwidth) / self.chunkwidth
+            x_local = (x + xorig) % self.chunkwidth
+            start = (yorig) % self.chunkwidth
+            chunk = chunks_involved[x_chunk][0]
+            if chunk is not None:
+                region[x] += chunk.tiles[x_local][start:]
+                #print "Added Tiles to world initial: %s" % len(chunk.tiles[x_local][start:])
+            else:
+                region[x] += [None for i in range(self.chunkwidth - start)]
+                #print "Added Nones to world initial: %s" % len(region[x])
+            for y in range (1, len(chunks_involved[x_chunk])):
+                chunk = chunks_involved[x_chunk][y]
+                if chunk is not None:
+                    region[x] += chunk.tiles[x_local]
+                    #print "Added Tiles to world: %s" % len(chunk.tiles[x_local])
+                else:
+                    region[x] += [None for i in range(self.chunkwidth)]
+                    #print "Added Nones to world: %s" % self.chunkwidth
+            finish = (yorig + h) % self.chunkwidth
+            chunk = chunks_involved[x_chunk][-1]
+            if chunk is not None:
+                region[x] += chunk.tiles[x_local][:finish]
+                #print "Added Tiles to world final: %s" % finish
+            else:
+                region[x] += [None for i in range(finish)]
+                #print "Added Nones to world final: %s" % finish
+            ##print "Added to world final: %s" % finish
+            
+        #print region
+        #print len(region)
+        #print [len(y) for y in region]
+        return region
 
 class Chunk:
     def __init__(self, chunkwidth):
