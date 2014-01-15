@@ -10,6 +10,18 @@ import editor_actions
 import time
 import os
 
+
+##################################################################
+##################################################################
+###TODOPANTS
+###TODO
+###PANTS
+###We definitely need to ditch every global variable and create an
+###"app" object which contains all those fucking properties we are
+###currently passing in like gronks
+##################################################################
+##################################################################
+
 worldname = 'test'
 global last_frame_time
 last_frame_time = time.clock()
@@ -72,7 +84,7 @@ class WorldRegion(ScreenRegion):
             rect[2] = self.rect[0] + self.rect[2] - rect[0] if rect[0] + rect[2] > self.rect[0] + self.rect[2] else rect[2]
             rect[3] = self.rect[1] + self.rect[3] - rect[1] if rect[1] + rect[3] > self.rect[1] + self.rect[3] else rect[3]
 
-            if rect[2] and rect[3]:
+            if rect[2] > 0 and rect[3] > 0:
                 selection_area = pygame.Surface(rect[2:])
                 selection_area.fill((0, 0, 255))
                 selection_area.set_alpha(100)
@@ -105,7 +117,12 @@ class WorldRegion(ScreenRegion):
             self.last_mpos = mpos
             last_frame_time = time.clock()
         else:
-            delta = [(self.last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
+            try: 
+                delta = [(self.last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
+            except:
+                #Whoa! What a fuckin' edge case
+                self.PanWorld(button_string, "down", mpos)
+                return
             #print delta
             #No dragging for vertical
             delta.append(0)
@@ -177,17 +194,13 @@ def draw():
     region = ScreenRegion(bottom_panel, location+dimensions, layer)
     screenregions.append(region)
 
-    '''
     #Side bar
     location = (int(round(windowx * (1 - side_panel_width))), 0)  
     dimensions = (int(round(windowx * side_panel_width)), int(round(windowy * (1 - bottom_panel_height))))
     side_panel = pygame.Surface(dimensions)
     pygame.transform.scale(sidebar, dimensions, side_panel)
-    region = ScreenRegion(side_panel, location, dimensions, layer)
-
-    print "Rendering side panels took %f" % (timer - time.clock())
-    timer = time.clock()
-    '''
+    region = ScreenRegion(side_panel, location+dimensions, layer)
+    
     #Render buttons onto side panes
     layer = 3
 

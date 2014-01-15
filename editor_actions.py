@@ -32,6 +32,10 @@ class MemorySummary:
         tr.print_diff()
 
 class Copy:
-    def go(self, key_event, worlds, active_world, rect, **kwargs):
-        copy_buffer = worlds[active_world].copy_selected(rect)
+    def go(self, key_event, worlds, active_world, rect, z, **kwargs):
+        copy_buffer = worlds[active_world].copy_selected(rect, z)
         worlds[-1] = copy_buffer
+
+class SetTest:
+    def go(self, worlds, active_world, rect, z):
+        worlds[active_world].fill_rect(rect, 1, z)

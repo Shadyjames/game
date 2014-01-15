@@ -278,6 +278,59 @@ class World:
         #print [len(y) for y in region]
         return region
 
+    def fill_rect(self, rect, tile_type, z):
+        xorig, yorig, w, h = rect
+        region = [[Tile(tile_type) for y in range(h)] for x in range(w)]
+        self.set_rect([xorig, yorig], region, z)
+
+    #Sets a flat region of a world. Avoids chunk lookup calculations used in get()
+    def set_rect(self, location, region, z):
+        #TODO: Test
+        #TODO: Put tile types on the sidebar
+        xorig, yorig = location
+        w = len(region)
+        h = len(region[0])
+        if xorig < 0 or yorig < 0 or w <= 0 or h <= 0:
+            raise Exception("The fuck is this shit")
+        if xorig + w >= self.x:
+            print "WARNING: region set by set_rect was truncated because part of the x dimension fell outside the world"
+            region = region[:self.x - xorig]
+        if yorig + h >= self.y:
+            print "WARNING: region set by set_rect was truncated because part of the x dimension fell outside the world"
+            region = [column[:self.y - yorig] for column in region]
+        chunks_involved = [[None for y in range(int(ceil(float(h + yorig % self.chunkwidth) / self.chunkwidth)))] for x in range(int(ceil(float(w + xorig % self.chunkwidth) / self.chunkwidth)))]
+        region = [[] for x in range(w)]
+        for x in range(len(chunks_involved)):
+            for y in range(len(chunks_involved[0])):
+                xindex = x + xorig/self.chunkwidth
+                yindex = y + yorig/self.chunkwidth
+                if xindex < 0 or yindex < 0 or xindex >= len(self.chunks) or yindex >= len(self.chunks[xindex]):
+                    chunks_involved[x][y] = None
+                else:
+                    chunks_involved[x][y] = self.chunks[xindex][yindex][z]
+
+        #print chunks_involved
+        region = [[] for x in range(w)]
+        for x in range(w):
+            x_chunk = (x + xorig % self.chunkwidth) / self.chunkwidth
+            x_local = (x + xorig) % self.chunkwidth
+            start = self.chunkwidth - (yorig % self.chunkwidth)
+            chunk = chunks_involved[x_chunk][0]
+            if chunk is not None:
+                chunk.tiles[x_local] = chunk.tiles[x_local][:start] + region[x][:start] 
+            for y_chunk in range (1, len(chunks_involved[x_chunk])):
+                chunk = chunks_involved[x_chunk][y_chunk]
+                if chunk is not None:
+                    slice_start = start + chunkwidth * (y_chunk - 1)
+                    slice_end = slice_start + chunkwidth
+                    chunk.tiles[x_local] = region[x][slice_start:slice_end]
+            chunk = chunks_involved[x_chunk][-1]
+            tail = region[x][slice_end:]
+            if chunk is not None:
+                chunk.tiles[x_local] = tail + chunk.tiles[x_local][len(tail):]
+
+        return region
+
 class Chunk:
     def __init__(self, chunkwidth):
         self.tiles = [[Tile(0) for y in range(chunkwidth)] for x in range(chunkwidth)]
