@@ -18,7 +18,8 @@ This way, the more recent of two opposing directional commands will take precede
 '''
 class Player_MoveDown:
     cooldown = 0
-    def go(self, key_event, player=None, **kwargs):
+    def go(self, key_event, app):
+        player = app.player
         if key_event == 'down':
             player.movestates[3] = 1
             player.movestates[2] = 0
@@ -28,7 +29,8 @@ class Player_MoveDown:
             player.movestates[3] = 1
 class Player_MoveUp:
     cooldown = 0
-    def go(self, key_event, player=None, **kwargs):
+    def go(self, key_event, app):
+        player = app.player
         if key_event == 'down':
             player.movestates[2] = 1
             player.movestates[3] = 0
@@ -38,7 +40,8 @@ class Player_MoveUp:
             player.movestates[2] = 1
 class Player_MoveRight:
     cooldown = 0
-    def go(self, key_event, player=None, **kwargs):
+    def go(self, key_event, app):
+        player = app.player
         if key_event == 'down':
             player.movestates[1] = 1
             player.movestates[0] = 0
@@ -48,7 +51,8 @@ class Player_MoveRight:
             player.movestates[1] = 1
 class Player_MoveLeft:
     cooldown = 0
-    def go(self, key_event, player=None, **kwargs):
+    def go(self, key_event, app):
+        player = app.player
         if key_event == 'down':
             player.movestates[0] = 1
             player.movestates[1] = 0

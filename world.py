@@ -5,7 +5,7 @@ import sys
 tilewidth = 32
 
 class World:
-    def __init__(self, x=10, y=10, z=10, chunkwidth=3, worldnum=None):
+    def __init__(self, x=10, y=10, z=10, chunkwidth=3):
         self.x = x
         self.y = y
         self.z = z
@@ -14,7 +14,6 @@ class World:
         self.chunkwidth = chunkwidth
         self.chunksize = pow(self.chunkwidth, 2)
         self.chunks = self.new_chunklist()
-        self.worldnum = worldnum
         self.fill(2)
         #self.coordinate_fill()
         '''

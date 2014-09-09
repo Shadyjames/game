@@ -6,7 +6,10 @@ import ConfigParser
 from controls import Control
 from math import floor, ceil
 from copy import deepcopy
+from render import draw_world, ScreenRegion, screen, windowx, windowy, other_images
+from main import App
 import editor_actions
+import editor_actions as actions
 import time
 import os
 
@@ -22,42 +25,24 @@ import os
 ##################################################################
 ##################################################################
 
-worldname = 'test'
-global last_frame_time
-last_frame_time = time.clock()
-
-config = ConfigParser.ConfigParser()
-config.read("settings.cfg")
-cameras = [Player.Player([0.25, 0.25, 0], config), Player.Player([5, 5, 0], config)]
-bottom_panel_height = 0.4
-side_panel_width = 0.3
-windowx = int(config.get('window', 'x'))
-windowy = int(config.get('window', 'y'))
 tilewidth = 32
-layers = 5
-screen = pygame.display.set_mode((windowx, windowy))
-
-#This cannot be done until display is initialised
-from render import ScreenRegion, draw_world
-
-#Globals for mouse actions that persist between frames
-active_world = 0
-last_mpos = None
-last_frame_time = None
-drag_start = None
 
 class WorldRegion(ScreenRegion):
-    def __init__(self, image, rect, layer, worldnum):
-        self.last_mpos = None
-        self.world = worlds[worldnum]
+    def __init__(self, rect, app):
+        self.rect = rect
+        self.world = World.World()
+        self.world.load('test')
         self.world.selection_start = None
         self.world.selection_end = None
-        self.worldnum = worldnum
-        self.camera = cameras[worldnum]
-        ScreenRegion.__init__(self, image, rect, layer)
+        self.camera = Player.Player([5, 5, 0], app.config)
 
-    def draw(self, screen):
-        draw_world(self.world, self.camera, screen, self.rect, True)
+        #Keep a reference to the editor on the regions for things like 
+        #setting the active Region, when a tile is clicked
+        self.app = app
+
+    def draw(self):
+        screen = self.app.screen
+        draw_world(self.app, self.camera, self.rect, True)
 
         if self.world.selection_start is not None:
             #Draw the selection area
@@ -104,172 +89,170 @@ class WorldRegion(ScreenRegion):
 
     #Wooh arithmetic
     def pos_to_coords(self, pos):
-        return (int((pos[0] + cameras[self.worldnum].x * tilewidth - self.rect[0] % tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
-                int((pos[1] + cameras[self.worldnum].y * tilewidth - self.rect[1] % tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
+        return (int((pos[0] + self.camera.x * tilewidth - self.rect[0] % tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
+                int((pos[1] + self.camera.y * tilewidth - self.rect[1] % tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
 
     def coords_to_pos(self, coords):
-        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - cameras[self.worldnum].x * tilewidth + self.rect[0] % tilewidth,
-                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - cameras[self.worldnum].y * tilewidth + self.rect[1] % tilewidth)
+        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - self.camera.x * tilewidth + self.rect[0] % tilewidth,
+                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - self.camera.y * tilewidth + self.rect[1] % tilewidth)
 
-    def PanWorld(self, button_string, button_event, mpos):
-        global last_mpos, last_frame_time
-        if button_event == "down":
-            self.last_mpos = mpos
-            last_frame_time = time.clock()
-        else:
+    def PanWorld(self, app, button_event):
+        if button_event != "down":
             try: 
-                delta = [(self.last_mpos[i] - mpos[i]) / float(tilewidth) for i in range(2)]
+                delta = [(app.last_mpos[i] - app.mpos[i]) / float(tilewidth) for i in range(2)]
             except:
                 #Whoa! What a fuckin' edge case
-                self.PanWorld(button_string, "down", mpos)
+                self.PanWorld(app, "down")
                 return
             #print delta
             #No dragging for vertical
             delta.append(0)
-            cameras[self.worldnum].position = [cameras[self.worldnum].position[i] + delta[i] for i in range(3)]
-            #print cameras[self.worldnum].position
-            self.last_mpos = mpos
+            self.camera.position = [self.camera.position[i] + delta[i] for i in range(3)]
+            #print self.camera.position
             
             frame_time = time.clock()
             #if frame_time - frame_time % 0.1 != last_frame_time - last_frame_time_time % 0.05:
             #    redraw()
             last_frame_time = frame_time
 
-    def ClickTile(self, button_string, button_event, mpos):
+    def ClickTile(self, app, button_event):
         #Set selection to region between drag start and finish
         if button_event == "down":
-            self.world.selection_start = self.pos_to_coords(mpos)
-            self.world.selection_end = self.pos_to_coords(mpos)
+            self.world.selection_start = self.pos_to_coords(app.mpos)
+            self.world.selection_end = self.pos_to_coords(app.mpos)
         else:
-            self.world.selection_end = self.pos_to_coords(mpos)
-            active_world = self.worldnum
+            self.world.selection_end = self.pos_to_coords(app.mpos)
+            self.app.active_world = self
 
-def do_input():
-    keypresses = pygame.key.get_pressed()
-    total_keys = len(keypresses)
-    mpresses = pygame.mouse.get_pressed()
-    mpos = pygame.mouse.get_pos()
-    keypresses = keypresses + tuple([mpresses[i] for i in range(len(mpresses))])
-    for keys, control in controls.iteritems():
-        ##TODO
-        control.update( all([keypresses[key] for key in keys]), 
-                        keys=keys,
-                        worlds=worlds, 
-                        active_world=active_world,
-                        cameras=cameras, 
-                        config=config, 
-                        screenregions=screenregions,
-                        mpos=mpos)
+    action1 = ClickTile
+    action2 = PanWorld
 
-def draw():
-    layer = 0
-    worldnum = 0
-    #Render world 0 to the main window
-    map_x = (1 - side_panel_width) * windowx
-    map_y = (1 - bottom_panel_height) * windowy
-    map_rect = (0, 0, map_x, map_y)
-    draw_world(worlds[worldnum], cameras[worldnum], screen, map_rect, True)
-    map_region = WorldRegion(None, map_rect, layer, worldnum)
-    map_region.addEvent('MBUTTON_1', map_region.ClickTile)
-    map_region.addEvent('MBUTTON_3', map_region.PanWorld)
-    screenregions.append(map_region)
+class MapEditor(App):
+    def __init__(self):
+        App.__init__(self)
+        self.worldname = 'test'
+        self.last_frame_time = time.clock()
 
-    #Render world 1 to the corner
-    worldnum = 1
-    map_x = side_panel_width * windowx
-    map_y = bottom_panel_height * windowy
-    map_rect = ((1 - side_panel_width) * windowx, (1 - bottom_panel_height) * windowy, map_x, map_y)
-    draw_world(worlds[worldnum], cameras[worldnum], screen, map_rect, True)
-    map_region = WorldRegion(None, map_rect, layer, worldnum)
-    map_region.addEvent('MBUTTON_1', map_region.ClickTile)
-    map_region.addEvent('MBUTTON_3', map_region.PanWorld)
-    screenregions.append(map_region)
-    #Render sidebars    
-    #Bottom panel
-    sidebar = other_images['editor_sidebar']
-    location = (0, int(round(windowy * (1 - bottom_panel_height))))
-    dimensions = (int(round(windowx * (1- side_panel_width))), int(round(windowy * bottom_panel_height)))
-    bottom_panel = pygame.Surface(dimensions)
-    pygame.transform.scale(sidebar, dimensions, bottom_panel)
-    region = ScreenRegion(bottom_panel, location+dimensions, layer)
-    screenregions.append(region)
+        self.bottom_panel_height = 0.4
+        self.side_panel_width = 0.3
+        self.config = ConfigParser.ConfigParser()
+        self.config.read("settings.cfg")
+        self.windowx = windowx
+        self.windowy = windowy
+        self.screen = screen
+        self.tilewidth = tilewidth
 
-    #Side bar
-    location = (int(round(windowx * (1 - side_panel_width))), 0)  
-    dimensions = (int(round(windowx * side_panel_width)), int(round(windowy * (1 - bottom_panel_height))))
-    side_panel = pygame.Surface(dimensions)
-    pygame.transform.scale(sidebar, dimensions, side_panel)
-    region = ScreenRegion(side_panel, location+dimensions, layer)
-    
-    #Render buttons onto side panes
-    layer = 3
+        #Globals for mouse actions that persist between frames
+        self.active_world = 0
+        
+        self.mpos = None
+        self.last_mpos = None
+        
+        self.frame_time = time.clock()
+        self.last_frame_time = None
 
-def redraw():
-    tempregions = screenregions[:]
-    for layer in range(layers):
-        i = 0
-        while i < len(tempregions):
-            if tempregions[i].layer == layer:
-                tempregions[i].draw(screen)
-                poppedregion = tempregions.pop(i)
-            else:
-                i += 1
+        self.drag_start = None
 
+        #First two worlds are the ones you see on the screen, third is copy buffer
+        self.copybuffer = World.World()
+
+        #Import tile images from render.py
+
+        #TODOPANTS
+        #We definitely need to reassess how we're doing the bindings (+ combined bindings)
+        #Load control bindings
+        self.bindings = ConfigParser.ConfigParser()
+        self.bindings.optionxform = str
+        self.bindings.read("bindings.cfg")
+        self.controls = {}
+        for binding in self.bindings.items('editor_bindings'):
+            #Add a Control object with Control.action = actionname, to the dictionary of bound controls
+            keys = []
+            for item in binding[0].split('+'):
+                if item.startswith('K_'):
+                    keys.append(getattr(pygame, item))
+                elif item.startswith('MBUTTON_'):
+                    #we treat mouse buttons as keys. Don't know why thats so much to ask.
+                    keys.append(int(item[-1]) + len(pygame.key.get_pressed()) - 1) 
+            keys = tuple(keys)
+            self.controls[keys] = Control(getattr(editor_actions, binding[1])())
+
+        self.screenregions = []
+        self.draw()
+        for region in self.screenregions:
+            #print region.events
+            pass
+
+    def main(self):
+        while self.running:
+            #Timing
+            self.last_frame_time = self.frame_time
+            self.frame_time = time.clock()
+
+            #Check for exit event
+            event = pygame.event.poll()
+            if event.type == pygame.QUIT:
+                running = False
+            
+            self.redraw()
+            self.do_input()
+            
+            #Render to the display
+            pygame.display.flip()
+
+    def do_input(self):
+        self.last_mpos = self.mpos
+        self.mpos = pygame.mouse.get_pos()
+        keypresses = pygame.key.get_pressed()
+        total_keys = len(keypresses)
+        mpresses = pygame.mouse.get_pressed()
+        keypresses = keypresses + tuple([mpresses[i] for i in range(len(mpresses))])
+        for keys, control in self.controls.iteritems():
+            ##TODO
+            self.update_control(control, all([keypresses[key] for key in keys]))
+
+    def draw(self):
+        #Render world 0 to the main window
+        map_x = (1 - self.side_panel_width) * self.windowx
+        map_y = (1 - self.bottom_panel_height) * self.windowy
+        map_rect = (0, 0, map_x, map_y)
+        map_region = WorldRegion(map_rect, self)
+        self.screenregions.append(map_region)
+
+        #Render world 1 to the corner
+        map_x = self.side_panel_width * self.windowx
+        map_y = self.bottom_panel_height * self.windowy
+        map_rect = ((1 - self.side_panel_width) * self.windowx, (1 - self.bottom_panel_height) * self.windowy, map_x, map_y)
+        map_region = WorldRegion(map_rect, self)
+        self.screenregions.append(map_region)
+        #Render sidebars    
+        #Bottom panel
+        sidebar = other_images['editor_sidebar']
+        location = (0, int(round(self.windowy * (1 - self.bottom_panel_height))))
+        dimensions = (int(round(self.windowx * (1- self.side_panel_width))), int(round(self.windowy * self.bottom_panel_height)))
+        bottom_panel = pygame.Surface(dimensions)
+        pygame.transform.scale(sidebar, dimensions, bottom_panel)
+        region = ScreenRegion(location+dimensions, self, image=bottom_panel)
+        self.screenregions.append(region)
+
+        #Side bar
+        location = (int(round(self.windowx * (1 - self.side_panel_width))), 0)  
+        dimensions = (int(round(self.windowx * self.side_panel_width)), int(round(self.windowy * (1 - self.bottom_panel_height))))
+        side_panel = pygame.Surface(dimensions)
+        pygame.transform.scale(sidebar, dimensions, side_panel)
+        region = ScreenRegion(location+dimensions, self, image=side_panel)
+        self.screenregions.append(region)
+        
+        #Render buttons onto side panes
+
+    def redraw(self):
+        for region in self.screenregions:
+            region.draw()
 
 if __name__ == "__main__":
+    editor = MapEditor()
+    editor.main()
 
 
-    running = True
 
-    #First two worlds are the ones you see on the screen, third is copy buffer
-    worlds = [World.World(worldnum = 0),
-              World.World(worldnum = 1),
-              World.World(worldnum = 2)]
-
-    #Load tile images
-    tile_images = {}
-    other_images = {}
-    print os.listdir(".")
-    files = os.listdir("assets/images")
-    for i in files:
-        if i[-4:] == ".jpg":
-            try:
-                tile_images[int(i[:-4])] = pygame.image.load("assets/images/" + i).convert(32)
-            except:
-                other_images[i[:-4]] = pygame.image.load("assets/images/" + i).convert(32)
-
-    #Load control bindings
-    bindings = ConfigParser.ConfigParser()
-    bindings.optionxform = str
-    bindings.read("bindings.cfg")
-    controls = {}
-    for binding in bindings.items('editor_bindings'):
-        #Add a Control object with Control.action = actionname, to the dictionary of bound controls
-        keys = []
-        for item in binding[0].split('+'):
-            if item.startswith('K_'):
-                keys.append(getattr(pygame, item))
-            elif item.startswith('MBUTTON_'):
-                #we treat mouse buttons as keys. Don't know why thats so much to ask.
-                keys.append(int(item[-1]) + len(pygame.key.get_pressed()) - 1) 
-        keys = tuple(keys)
-        print keys
-        controls[keys] = Control(getattr(editor_actions, binding[1])())
-
-    screenregions = []
-    worlds[0].load(worldname)
-    worlds[1].load(worldname)
-    draw()
-    for region in screenregions:
-        #print region.events
-        pass
-    while running:
-        event = pygame.event.poll()
-        if event.type == pygame.QUIT:
-            running = False
-        
-        redraw()
-        do_input()
-        pygame.display.flip()
-        #render()
 
