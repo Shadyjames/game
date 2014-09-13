@@ -41,9 +41,9 @@ class ScreenRegion:
 
 
 #This SHOULD be faster than the below draw_world for large chunk sizes
-def draw_world(game, player, rect, crop=False):
-    world = game.world
-    screen = game.screen
+def draw_world(world, player, screen, rect, crop=False):
+    world = world
+    screen = screen
     xorig, yorig, w, h = rect
     #print "Rect is: %s" % repr(rect)
     xtiles = int(ceil(w / tilewidth)) + 1

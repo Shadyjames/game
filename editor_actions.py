@@ -15,20 +15,6 @@ class LeftActivate:
                 region.action1(app, button_event)
                 break
 
-####WRONG WRONG WRONG WRONG
-####WRONG WRONG WRONG WRONG
-####YOU'RE WRONG
-####YOU'RE WRONG
-####YOU'RE WRONG
-####It's 3 o'wrong on the wrongit cock.
-
-#The entire point of the control => action abstraction layer is to make actions INDEPENDENT OF WHAT FIRED THEM
-#This shit brings it full circle and suddenly we're dependent again. 
-#So maybe we can CALL it RightActivate and LeftActivate still, just so they make sense,
-#but they should work correctly if the controls get rebound to another key.
-
-#Rework the entire event system.
-
 class RightActivate:
     def go(self, button_event, app):
         #Ascertain which region we have clicked within
@@ -48,5 +34,7 @@ class Copy:
         worlds[-1] = copy_buffer
 
 class SetTest:
-    def go(self, button_event, app, rect=None, z=None):
-        worlds[active_world].fill_rect(rect, 1, z)
+    def go(self, button_event, app):
+        if app.active_world and app.active_world.selection_end and button_event == "down":
+            rect = app.active_world.selection_start + app.active_world.selection_end
+            app.active_world.fill_rect(rect, 1, app.active_world.selection_z)

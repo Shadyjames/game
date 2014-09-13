@@ -42,7 +42,7 @@ class WorldRegion(ScreenRegion):
 
     def draw(self):
         screen = self.app.screen
-        draw_world(self.app, self.camera, self.rect, True)
+        draw_world(self.world, self.camera, self.app.screen, self.rect, True)
 
         if self.world.selection_start is not None:
             #Draw the selection area
@@ -122,7 +122,9 @@ class WorldRegion(ScreenRegion):
             self.world.selection_end = self.pos_to_coords(app.mpos)
         else:
             self.world.selection_end = self.pos_to_coords(app.mpos)
-            self.app.active_world = self
+            self.app.active_world = self.world
+
+        self.world.selection_z = self.camera.z
 
     action1 = ClickTile
     action2 = PanWorld
@@ -143,7 +145,7 @@ class MapEditor(App):
         self.tilewidth = tilewidth
 
         #Globals for mouse actions that persist between frames
-        self.active_world = 0
+        self.active_world = None
         
         self.mpos = None
         self.last_mpos = None
