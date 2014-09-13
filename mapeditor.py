@@ -125,6 +125,8 @@ class WorldRegion(ScreenRegion):
             self.app.active_world = self.world
 
         self.world.selection_z = self.camera.z
+        #print self.world.selection_start
+        #print self.world.selection_end
 
     action1 = ClickTile
     action2 = PanWorld
@@ -162,6 +164,7 @@ class MapEditor(App):
 
         #TODOPANTS
         #We definitely need to reassess how we're doing the bindings (+ combined bindings)
+        #SEE TODO IN editor_actions.py FOR SOLUTION
         #Load control bindings
         self.bindings = ConfigParser.ConfigParser()
         self.bindings.optionxform = str

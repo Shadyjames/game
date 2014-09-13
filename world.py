@@ -278,16 +278,16 @@ class World:
         return region
 
     def fill_rect(self, rect, tile_type, z):
-        print rect
+        #print rect
         xorig, yorig, w, h = rect
-        region = [[Tile(tile_type) for y in range(h - 1)] for x in range(w - 1)]
-        print region
+        region = [[Tile(tile_type) for y in range(h)] for x in range(w)]
+        #print region
         self.set_rect([xorig, yorig], region, z)
 
     #Sets a flat region of a world. Avoids chunk lookup calculations used in get()
     def set_rect(self, location, region, z):
-        print "COCKS COCKS COCKS"
-        print self.get(2, 2)
+        #print "COCKS COCKS COCKS"
+        #print self.get(2, 2)
         #TODO: Test
         #TODO: Put tile types on the sidebar
         xorig, yorig = location
@@ -303,10 +303,12 @@ class World:
             region = [column[:self.y - yorig] for column in region]
         chunks_involved = [[None for y in range(int(ceil(float(h + yorig % self.chunkwidth) / self.chunkwidth)))] for x in range(int(ceil(float(w + xorig % self.chunkwidth) / self.chunkwidth)))]
         #region = [[] for x in range(w)]
+        '''
         print yorig, h, self.chunkwidth
         print yorig / self.chunkwidth
         print (yorig+h - 1) / self.chunkwidth + 1
         print range(yorig/self.chunkwidth, (yorig+h-1)/ self.chunkwidth + 1)
+        '''
         chunks_involved = [[None for y in range(yorig / self.chunkwidth, (yorig+h-1) / self.chunkwidth + 1)] for x in range(xorig / self.chunkwidth, (xorig+w-1) / self.chunkwidth + 1)]
         for x in range(len(chunks_involved)):
             for y in range(len(chunks_involved[0])):
@@ -317,7 +319,7 @@ class World:
                 else:
                     chunks_involved[x][y] = self.chunks[xindex][yindex][z]
 
-        print chunks_involved
+        #print chunks_involved
 
         #print chunks_involved
         #region = [[] for x in range(w)]
@@ -331,7 +333,7 @@ class World:
             start = self.chunkwidth - (yorig % self.chunkwidth)
             chunk = chunks_involved[x_chunk][0]
             #If the chunk is None
-            print chunks_involved
+            #print chunks_involved
             if chunk is not None:
                 '''
                 print "INITIAL ASSIGNMENT:"
@@ -339,12 +341,12 @@ class World:
                 print chunk.tiles[x_local]
                 print region[x]
                 print region[x][:start], region[x][start:]\
+                print chunk.tiles[x_local][:self.chunkwidth - start], region[x][:start]
                 '''
-                #print chunk.tiles[x_local][:self.chunkwidth - start], region[x][:start]
                 chunk.tiles[x_local] = chunk.tiles[x_local][:self.chunkwidth - start] + region[x][:start]
                 #print chunk.tiles[x_local]
                 slice_end = start
-            if len(chunks_involved) > 2:
+            if len(chunks_involved[x_chunk]) > 2:
                 for y_chunk in range (1, len(chunks_involved[x_chunk]) - 1):
                     chunk = chunks_involved[x_chunk][y_chunk]
                     #print chunk
@@ -355,12 +357,19 @@ class World:
                         #print chunk.tiles[x_local]
                         #print region[x][slice_start:slice_end]
                         chunk.tiles[x_local] = region[x][slice_start:slice_end]
-            if len(chunks_involved) > 1:
+            if len(chunks_involved[x_chunk]) > 1:
                 chunk = chunks_involved[x_chunk][-1]
                 tail = region[x][slice_end:]
                 if chunk is not None:
-                    #print "TAIL ASSIGNMENT:"
-                    #print chunk.tiles[x_local]
+                    '''
+                    print "TAIL ASSIGNMENT:"
+                    print tail
+                    print region
+                    print region[x]
+                    print region[x][slice_end:]
+                    print slice_end
+                    print chunk.tiles[x_local]
+                    '''
                     chunk.tiles[x_local] = tail + chunk.tiles[x_local][len(tail):]
                     #print chunk.tiles[x_local]
         #print "COCKS COCKS COCKS"
