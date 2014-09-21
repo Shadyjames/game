@@ -3,7 +3,7 @@ import world as World
 import player as Player
 #import player as Player
 import ConfigParser
-from controls import Control
+from controls import load_controls
 from math import floor, ceil
 from copy import deepcopy
 from render import draw_world, ScreenRegion, screen, windowx, windowy, other_images
@@ -141,6 +141,7 @@ class MapEditor(App):
         self.side_panel_width = 0.3
         self.config = ConfigParser.ConfigParser()
         self.config.read("settings.cfg")
+        self.pure_bindings = bool(int(self.config.get('editor', 'pure_bindings')))
         self.windowx = windowx
         self.windowy = windowy
         self.screen = screen
@@ -166,21 +167,8 @@ class MapEditor(App):
         #We definitely need to reassess how we're doing the bindings (+ combined bindings)
         #SEE TODO IN editor_actions.py FOR SOLUTION
         #Load control bindings
-        self.bindings = ConfigParser.ConfigParser()
-        self.bindings.optionxform = str
-        self.bindings.read("bindings.cfg")
-        self.controls = {}
-        for binding in self.bindings.items('editor_bindings'):
-            #Add a Control object with Control.action = actionname, to the dictionary of bound controls
-            keys = []
-            for item in binding[0].split('+'):
-                if item.startswith('K_'):
-                    keys.append(getattr(pygame, item))
-                elif item.startswith('MBUTTON_'):
-                    #we treat mouse buttons as keys. Don't know why thats so much to ask.
-                    keys.append(int(item[-1]) + len(pygame.key.get_pressed()) - 1) 
-            keys = tuple(keys)
-            self.controls[keys] = Control(getattr(editor_actions, binding[1])())
+        self.controls = load_controls('editor_bindings')
+
 
         self.screenregions = []
         self.draw()
@@ -204,17 +192,6 @@ class MapEditor(App):
             
             #Render to the display
             pygame.display.flip()
-
-    def do_input(self):
-        self.last_mpos = self.mpos
-        self.mpos = pygame.mouse.get_pos()
-        keypresses = pygame.key.get_pressed()
-        total_keys = len(keypresses)
-        mpresses = pygame.mouse.get_pressed()
-        keypresses = keypresses + tuple([mpresses[i] for i in range(len(mpresses))])
-        for keys, control in self.controls.iteritems():
-            ##TODO
-            self.update_control(control, all([keypresses[key] for key in keys]))
 
     def draw(self):
         #Render world 0 to the main window

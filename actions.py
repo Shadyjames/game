@@ -1,11 +1,6 @@
 import sys
-
-#To be an action, it must have a go() method and a cooldown
-class Quit:
-    cooldown = 0
-    def go(self, key_event, app):
-        sys.exit()
-
+from pympler import tracker
+tr = tracker.SummaryTracker()
 
 '''
 This may seem complicated, but the design goals for controlling movement this way is: 
@@ -16,6 +11,7 @@ a player who is making a quick directional change who holds both opposing keys f
 frames is not penalised by not accellerating for those frames
 This way, the more recent of two opposing directional commands will take precedence.
 '''
+
 class Player_MoveDown:
     cooldown = 0
     def go(self, key_event, app):
@@ -60,3 +56,43 @@ class Player_MoveLeft:
             player.movestates[0] = 0
         elif key_event == 'held' and player.movestates[1] == 0:
             player.movestates[0] = 1
+
+class Quit:
+    def go(self, key_event, app):
+        sys.exit()
+
+class LeftActivate:
+    def go(self, button_event, app):
+        #Ascertain which region we have clicked within
+        for region in reversed(app.screenregions):
+            if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2]) and\
+            region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3]):
+                region.action1(app, button_event)
+                break
+
+class RightActivate:
+    def go(self, button_event, app):
+        #Ascertain which region we have clicked within
+        for region in reversed(app.screenregions):
+            if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2]) and\
+            region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3]):
+                region.action2(app, button_event)
+                break
+
+class MemorySummary:
+    def go(self, button_event, app):
+        tr.print_diff()
+
+###TODO: FIX COPY IT DUN DO ANYTHING
+class Copy:
+    def go(self, button_event, app, rect=None, z=None):
+        app.copy_buffer = app.active_world.get_rect(app.active_world.selection_rect, z)
+
+class Paste:
+    def go(self, button_event, app):
+        app.active_world.set_rect(app.active_world.selection_start, app.copy_buffer, z)
+
+class Fill:
+    def go(self, button_event, app):
+        if app.active_world and app.active_world.selection_end and button_event == "down":
+            app.active_world.fill_rect(app.active_world.selection_rect, 1, app.active_world.selection_z)

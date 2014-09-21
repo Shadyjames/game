@@ -61,13 +61,37 @@ class App:
         control.time_to_ready  = getattr(control.action, 'cooldown', 0)
         control.state = state
 
+    def do_input(self):
+        self.last_mpos = self.mpos
+        self.mpos = pygame.mouse.get_pos()
+        keypresses = pygame.key.get_pressed()
+        total_keys = len(keypresses)
+        mpresses = pygame.mouse.get_pressed()
+        keypresses = keypresses + tuple([mpresses[i] for i in range(len(mpresses))])
+        if self.pure_bindings:
+            for key, control in self.controls.iteritems():
+                self.update_control(control, keypresses[key])
+        else:
+            mods = tuple\
+                    ([
+                        any([keypresses[pygame.K_LCTRL], keypresses[pygame.K_RCTRL]]),
+                        any([keypresses[pygame.K_LALT], keypresses[pygame.K_RALT]]),
+                        any([keypresses[pygame.K_LSHIFT], keypresses[pygame.K_RSHIFT]])
+                    ])
+            primary_controls = self.controls.get(mods, {})
+            secondary_controls = self.controls[(False, False, False)]
+            for key, control in primary_controls.iteritems():
+                self.update_control(control, keypresses[key])
+            #If there's modifier keys held down, don't halt all activity on keys that use non-modifier bindings
+            for key, control in secondary_controls.iteritems():
+                if key not in primary_controls:
+                    self.update_control(control, keypresses[key])
+
 class Game(App):
     def __init__(self):
         App.__init__(self)
-        for binding in self.bindings.items('bindings'):
-            #Add a Control object with Control.action = actionname, to the dictionary of bound controls
-            self.controls[getattr(pygame, binding[0])] = Control(getattr(actions, binding[1])())
-
+        self.pure_bindings = bool(int(self.config.get('game', 'pure_bindings')))
+        self.controls = load_controls('bindings', pure=self.pure_bindings)
     def main(self):
         while self.running:
             #print("WOOT SDFHJSDGJHDFJKAHGHJASFCD VASFCV DGB")
@@ -84,12 +108,6 @@ class Game(App):
 
         pygame.quit()
 
-    def do_input(self):
-        keypresses = pygame.key.get_pressed()
-        for key, control in self.controls.iteritems():
-            self.update_control(control, keypresses[key])
-            ###TODO
-            #control.update(keypresses[key], world=world, player=player, config=config)
 
     def translate(self):
         self.player.update()

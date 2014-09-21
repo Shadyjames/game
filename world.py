@@ -223,6 +223,18 @@ class World:
                 bytes += hex(tile_type)[2:].zfill(2)
         return bytes
 
+    @property
+    def selection_rect(self):
+        #app.active_world.selection_* is TOO MANY LETTERS
+        #Shortern to point a, point b
+        a = self.selection_start
+        b = self.selection_end
+        rect = [a[0] if a[0] < b[0] else b[0], 
+                a[1] if a[1] < b[1] else b[1], 
+                abs(a[0] - b[0]) + 1,
+                abs(a[1] - b[1]) + 1]
+        return rect
+
     #Returns a flat region of a world. Avoids chunk lookup calculations used in get()
     def get_rect(self, rect, z):
         xorig, yorig, w, h = rect
@@ -286,9 +298,6 @@ class World:
 
     #Sets a flat region of a world. Avoids chunk lookup calculations used in get()
     def set_rect(self, location, region, z):
-        #print "COCKS COCKS COCKS"
-        #print self.get(2, 2)
-        #TODO: Test
         #TODO: Put tile types on the sidebar
         xorig, yorig = location
         w = len(region)
