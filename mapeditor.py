@@ -6,7 +6,7 @@ import ConfigParser
 from controls import load_controls
 from math import floor, ceil
 from copy import deepcopy
-from render import draw_world, ScreenRegion, screen, windowx, windowy, other_images
+from render import draw_world, ScreenRegion, screen, windowx, windowy, other_images, tile_images
 from main import App
 import editor_actions
 import editor_actions as actions
@@ -29,16 +29,12 @@ tilewidth = 32
 
 class WorldRegion(ScreenRegion):
     def __init__(self, rect, app):
-        self.rect = rect
+        ScreenRegion.__init__(self, rect, app)
         self.world = World.World()
         self.world.load('test')
         self.world.selection_start = None
         self.world.selection_end = None
         self.camera = Player.Player([5, 5, 0], app.config)
-
-        #Keep a reference to the editor on the regions for things like 
-        #setting the active Region, when a tile is clicked
-        self.app = app
 
     def draw(self):
         screen = self.app.screen
@@ -78,23 +74,24 @@ class WorldRegion(ScreenRegion):
 
     #NO TOUCHIE
     """
+    #Wooh arithmetic
     def pos_to_coords(self, pos):
-        return (int((pos[0] + cameras[self.world].x * tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
-                int((pos[1] + cameras[self.world].y * tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
+        return (int((pos[0] + self.camera.x * tilewidth - self.rect[0]) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
+                int((pos[1] + self.camera.y * tilewidth - self.rect[1]) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
 
     def coords_to_pos(self, coords):
-        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - cameras[self.world].x * tilewidth,
-                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - cameras[self.world].y * tilewidth)
+        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - self.camera.x * tilewidth + self.rect[0],
+                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - self.camera.y * tilewidth + self.rect[1])
     """
 
     #Wooh arithmetic
     def pos_to_coords(self, pos):
-        return (int((pos[0] + self.camera.x * tilewidth - self.rect[0] % tilewidth) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
-                int((pos[1] + self.camera.y * tilewidth - self.rect[1] % tilewidth) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
+        return (int((pos[0] + self.camera.x * tilewidth - self.rect[0]) / tilewidth - int(self.rect[2] / (2 * tilewidth))) - 1,
+                int((pos[1] + self.camera.y * tilewidth - self.rect[1]) / tilewidth - int(self.rect[3] / (2 * tilewidth))) - 1)
 
     def coords_to_pos(self, coords):
-        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - self.camera.x * tilewidth + self.rect[0] % tilewidth,
-                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - self.camera.y * tilewidth + self.rect[1] % tilewidth)
+        return ((coords[0] + 1 + int(self.rect[2] / (2 * tilewidth))) * tilewidth - self.camera.x * tilewidth + self.rect[0],
+                (coords[1] + 1 + int(self.rect[3] / (2 * tilewidth))) * tilewidth - self.camera.y * tilewidth + self.rect[1])
 
     def PanWorld(self, app, button_event):
         if button_event != "down":
@@ -127,9 +124,19 @@ class WorldRegion(ScreenRegion):
         self.world.selection_z = self.camera.z
         #print self.world.selection_start
         #print self.world.selection_end
+        print self.world.selection_start
 
     action1 = ClickTile
     action2 = PanWorld
+
+class TileSelectButton(ScreenRegion):
+    def __init__(self, rect, app, tile_type, image=None):
+        ScreenRegion.__init__(self, rect, app, image)
+        self.tile_type = tile_type
+
+    def SelectTileType(self, app, button_event):
+        app.selected_tile_type = self.tile_type
+    action1 = SelectTileType 
 
 class MapEditor(App):
     def __init__(self):
@@ -149,14 +156,11 @@ class MapEditor(App):
 
         #Globals for mouse actions that persist between frames
         self.active_world = None
-        
-        self.mpos = None
-        self.last_mpos = None
-        
         self.frame_time = time.clock()
         self.last_frame_time = None
 
         self.drag_start = None
+        self.selected_tile_type = 0
 
         #First two worlds are the ones you see on the screen, third is copy buffer
         self.copybuffer = World.World()
@@ -226,6 +230,28 @@ class MapEditor(App):
         self.screenregions.append(region)
         
         #Render buttons onto side panes
+        base_location = [location[0] + 5, location[1] + 5]
+        n_per_line = int(self.windowx * self.side_panel_width % self.tilewidth)
+        print n_per_line
+        done = False
+        i = 0
+        while not done:
+            for j in range(n_per_line):
+                tile_type = i*n_per_line+j
+                if tile_type in tile_images:
+                    location = [base_location[0] + self.tilewidth*j, base_location[1] + self.tilewidth*i]
+                    dimensions = [self.tilewidth, self.tilewidth]
+                    region = TileSelectButton(location+dimensions, self, tile_type, image=tile_images[tile_type])
+                    self.screenregions.append(region)
+                else:
+                    done = True
+            i += 1
+
+        ###TODO world save dropdown
+
+
+
+
 
     def redraw(self):
         for region in self.screenregions:

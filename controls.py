@@ -21,11 +21,11 @@ def load_controls(heading, pure=False):
         #The flags, from left to right, represent ctrl, alt, shift
         control = Control(getattr(actions, binding)())
         if pure:
-                if item.startswith('K_'):
-                    key = getattr(pygame, item)
-                elif item.startswith('MBUTTON_'):
+                if key.startswith('K_'):
+                    key = getattr(pygame, key)
+                elif key.startswith('MBUTTON_'):
                     #we treat mouse buttons as keys. Don't know why thats so much to ask.
-                    key = int(item[-1]) + len(pygame.key.get_pressed()) - 1
+                    key = int(key[-1]) + len(pygame.key.get_pressed()) - 1
                 controls[key] = control
         else:
             mod_list = [False, False, False]

@@ -307,9 +307,11 @@ class World:
         if xorig + w >= self.x:
             print "WARNING: region set by set_rect was truncated because part of the x dimension fell outside the world"
             region = region[:self.x - xorig]
+            w = len(region)
         if yorig + h >= self.y:
             print "WARNING: region set by set_rect was truncated because part of the y dimension fell outside the world"
             region = [column[:self.y - yorig] for column in region]
+            h = len(region[0])
         chunks_involved = [[None for y in range(int(ceil(float(h + yorig % self.chunkwidth) / self.chunkwidth)))] for x in range(int(ceil(float(w + xorig % self.chunkwidth) / self.chunkwidth)))]
         #region = [[] for x in range(w)]
         '''
@@ -349,10 +351,10 @@ class World:
                 print start
                 print chunk.tiles[x_local]
                 print region[x]
-                print region[x][:start], region[x][start:]\
-                print chunk.tiles[x_local][:self.chunkwidth - start], region[x][:start]
+                print region[x][:start], region[x][start:]
+                print chunk.tiles[x_local][:self.chunkwidth - start], region[x][:start], chunk.tiles[x_local][self.chunkwidth - start + len(region[x][:start]):]
                 '''
-                chunk.tiles[x_local] = chunk.tiles[x_local][:self.chunkwidth - start] + region[x][:start]
+                chunk.tiles[x_local] = chunk.tiles[x_local][:self.chunkwidth - start] + region[x][:start] + chunk.tiles[x_local][self.chunkwidth - start + len(region[x][:start]):]
                 #print chunk.tiles[x_local]
                 slice_end = start
             if len(chunks_involved[x_chunk]) > 2:

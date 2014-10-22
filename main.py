@@ -5,7 +5,7 @@ import world as World
 import player as Player
 #import player as Player
 import ConfigParser
-from controls import Control
+from controls import load_controls
 from render import screen, draw_world, windowx, windowy
 from math import floor
 import actions
@@ -25,6 +25,8 @@ class App:
         self.windowy = windowy
         self.tilewidth = 32
         self.screen = screen
+        self.mpos = None
+        self.last_mpos = None
         
         self.world = World.World(x=int(self.config.get('world', 'x')), y=int(self.config.get('world', 'y')), z=10)
         #world.load()
@@ -99,7 +101,7 @@ class Game(App):
             if event.type == pygame.QUIT:
                 self.running = False
 
-            draw_world(self, (45, 45, 640, 480), crop=True)
+            draw_world(self.world, self.player, self.screen, (45, 45, 640, 480), crop=True)
             pygame.display.flip()
             self.do_input()
             self.translate()

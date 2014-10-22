@@ -18,7 +18,7 @@ other_images = {}
 print os.listdir(".")
 files = os.listdir("assets/images")
 for i in files:
-    if i[-4:] == ".jpg":
+    if i[-4:] == ".png":
         try:
             tile_images[int(i[:-4])] = pygame.image.load("assets/images/" + i).convert(32)
         except:
@@ -29,6 +29,7 @@ class ScreenRegion:
         self.image = image
         self.rect = rect
         self.app = app
+        self.clickable = True
 
     def draw(self):
         self.app.screen.blit(self.image, self.rect)
@@ -39,6 +40,8 @@ class ScreenRegion:
     def action2(self, *args, **kwargs):
         return
 
+class TileTypeException(Exception):
+    pass
 
 #This SHOULD be faster than the below draw_world for large chunk sizes
 def draw_world(world, player, screen, rect, crop=False):
@@ -58,9 +61,13 @@ def draw_world(world, player, screen, rect, crop=False):
         for x in range(len(region)):
             for y in range(len(region[x])):
                 tile = region[x][y]
-                screen.blit(tile_images[tile.type if tile is not None else 0], 
-                                (xorig + tilewidth + (x - xoffset)*tilewidth, 
-                                 yorig + tilewidth + (y - yoffset)*tilewidth))
+                tile_type = tile.type if tile is not None else 0
+                try:
+                    screen.blit(tile_images[tile_type], 
+                                    (xorig + tilewidth + (x - xoffset)*tilewidth, 
+                                     yorig + tilewidth + (y - yoffset)*tilewidth))
+                except KeyError:
+                    raise TileTypeException("Attempted to render tile type that did not exist (not found in assets/images/): %s.png not found" % tile_type)
 
     else:
         #Draw the map to the buffer
@@ -71,9 +78,13 @@ def draw_world(world, player, screen, rect, crop=False):
         for x in range(len(region)):
             for y in range(len(region[x])):
                 tile = region[x][y]
-                screenbuffer.blit(tile_images[tile.type if tile is not None else 0], 
-                                    ((x - xoffset)*tilewidth, 
-                                    (y - yoffset)*tilewidth))
+                try:
+                    tile_type = tile.type if tile is not None else 0
+                    screenbuffer.blit(tile_images[tile_type], 
+                                        ((x - xoffset)*tilewidth, 
+                                        (y - yoffset)*tilewidth))
+                except KeyError:
+                    raise TileTypeException("Attempted to render tile type that did not exist (not found in assets/images/): %s.png not found" % tile_type)
 
         #Draw from the buffer to the screen
         screen.blit(screenbuffer, (xorig, yorig))

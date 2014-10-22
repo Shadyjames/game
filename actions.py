@@ -65,8 +65,9 @@ class LeftActivate:
     def go(self, button_event, app):
         #Ascertain which region we have clicked within
         for region in reversed(app.screenregions):
-            if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2]) and\
-            region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3]):
+            if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2])\
+            and region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3])\
+            and region.clickable:
                 region.action1(app, button_event)
                 break
 
@@ -74,8 +75,9 @@ class RightActivate:
     def go(self, button_event, app):
         #Ascertain which region we have clicked within
         for region in reversed(app.screenregions):
-            if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2]) and\
-            region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3]):
+            if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2])\
+            and region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3])\
+            and region.clickable:
                 region.action2(app, button_event)
                 break
 
@@ -83,16 +85,21 @@ class MemorySummary:
     def go(self, button_event, app):
         tr.print_diff()
 
-###TODO: FIX COPY IT DUN DO ANYTHING
 class Copy:
-    def go(self, button_event, app, rect=None, z=None):
-        app.copy_buffer = app.active_world.get_rect(app.active_world.selection_rect, z)
+    def go(self, button_event, app):
+        app.copy_buffer = app.active_world.get_rect(app.active_world.selection_rect, 
+                                                    app.active_world.selection_z)
 
 class Paste:
     def go(self, button_event, app):
-        app.active_world.set_rect(app.active_world.selection_start, app.copy_buffer, z)
+        app.active_world.set_rect(  app.active_world.selection_start, 
+                                    app.copy_buffer, 
+                                    app.active_world.selection_z)
 
 class Fill:
     def go(self, button_event, app):
         if app.active_world and app.active_world.selection_end and button_event == "down":
-            app.active_world.fill_rect(app.active_world.selection_rect, 1, app.active_world.selection_z)
+            print app.active_world.selection_rect
+            app.active_world.fill_rect( app.active_world.selection_rect, 
+                                        app.selected_tile_type, 
+                                        app.active_world.selection_z)
