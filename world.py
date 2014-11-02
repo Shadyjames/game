@@ -236,13 +236,16 @@ class World:
         return rect
 
     #Returns a flat region of a world. Avoids chunk lookup calculations used in get()
-    def get_rect(self, rect, z):
+    def get_rect(self, rect, z, debug=False):
         xorig, yorig, w, h = rect
         #print rect
         chunks_involved = [[None for y in range(int(ceil(float(h + yorig % self.chunkwidth) / self.chunkwidth)))] for x in range(int(ceil(float(w + xorig % self.chunkwidth) / self.chunkwidth)))]
         #print "chunks_involved dimensions: %s, %s" % (len(chunks_involved), len(chunks_involved[0]))
+        if debug:
+            print rect
         #print rect
         region = [[] for x in range(w)]
+        chunks_involved = [[None for y in range(yorig / self.chunkwidth, (yorig+h-1) / self.chunkwidth + 1)] for x in range(xorig / self.chunkwidth, (xorig+w-1) / self.chunkwidth + 1)]
         for x in range(len(chunks_involved)):
             for y in range(len(chunks_involved[0])):
                 xindex = x + xorig/self.chunkwidth
@@ -253,40 +256,56 @@ class World:
                     chunks_involved[x][y] = self.chunks[xindex][yindex][z]
 
 
-        #print chunks_involved
+        if debug:
+            print chunks_involved
         region = [[] for x in range(w)]
         for x in range(w):
+            if debug:
+                print "NEW X STARTED"
             x_chunk = (x + xorig % self.chunkwidth) / self.chunkwidth
             x_local = (x + xorig) % self.chunkwidth
             start = (yorig) % self.chunkwidth
             chunk = chunks_involved[x_chunk][0]
             if chunk is not None:
                 region[x] += chunk.tiles[x_local][start:]
-                #print "Added Tiles to world initial: %s" % len(chunk.tiles[x_local][start:])
+                if debug:
+                    print "Added Tiles to world initial: %s" % len(chunk.tiles[x_local][start:])
             else:
                 region[x] += [None for i in range(self.chunkwidth - start)]
-                #print "Added Nones to world initial: %s" % len(region[x])
-            for y in range (1, len(chunks_involved[x_chunk])):
-                chunk = chunks_involved[x_chunk][y]
+                if debug:
+                    print "Added Nones to world initial: %s" % len(region[x])
+            if len(chunks_involved[x_chunk]) > 2:
+                for y in range (1, len(chunks_involved[x_chunk]) - 1):
+                    chunk = chunks_involved[x_chunk][y]
+                    if chunk is not None:
+                        region[x] += chunk.tiles[x_local]
+                        if debug:
+                            print "Added Tiles to world: %s" % len(chunk.tiles[x_local])
+                    else:
+                        region[x] += [None for i in range(self.chunkwidth)]
+                        if debug:
+                            print "Added Nones to world: %s" % self.chunkwidth
+            if len(chunks_involved[x_chunk]) > 1:
+                finish = (yorig + h) % self.chunkwidth
+                if finish == 0:
+                    finish = self.chunkwidth
+                chunk = chunks_involved[x_chunk][-1]
                 if chunk is not None:
-                    region[x] += chunk.tiles[x_local]
-                    #print "Added Tiles to world: %s" % len(chunk.tiles[x_local])
+                    region[x] += chunk.tiles[x_local][:finish]
+                    if debug:
+                        print "Added Tiles to world final: %s" % finish
                 else:
-                    region[x] += [None for i in range(self.chunkwidth)]
-                    #print "Added Nones to world: %s" % self.chunkwidth
-            finish = (yorig + h) % self.chunkwidth
-            chunk = chunks_involved[x_chunk][-1]
-            if chunk is not None:
-                region[x] += chunk.tiles[x_local][:finish]
-                #print "Added Tiles to world final: %s" % finish
-            else:
-                region[x] += [None for i in range(finish)]
-                #print "Added Nones to world final: %s" % finish
+                    region[x] += [None for i in range(finish)]
+                    if debug:
+                        print "Added Nones to world final: %s" % finish
             ##print "Added to world final: %s" % finish
             
         #print region
         #print len(region)
         #print [len(y) for y in region]
+        if debug:
+            print region
+            print len(region[0])
         return region
 
     def fill_rect(self, rect, tile_type, z):
@@ -298,17 +317,18 @@ class World:
 
     #Sets a flat region of a world. Avoids chunk lookup calculations used in get()
     def set_rect(self, location, region, z):
-        #TODO: Put tile types on the sidebar
+        print region
         xorig, yorig = location
         w = len(region)
         h = len(region[0])
-        if xorig < 0 or yorig < 0 or w <= 0 or h <= 0:
+        if xorig < 0 or yorig < 0 or w <= 0 or h <= 0 or self.x < xorig or self.y < yorig:
             raise Exception("The fuck is this shit")
-        if xorig + w >= self.x:
+        if xorig + w - 1 > self.x:
+            print xorig, w, self.x
             print "WARNING: region set by set_rect was truncated because part of the x dimension fell outside the world"
-            region = region[:self.x - xorig]
+            region = region[:self.x - xorig + 1]
             w = len(region)
-        if yorig + h >= self.y:
+        if yorig + h - 1 > self.y:
             print "WARNING: region set by set_rect was truncated because part of the y dimension fell outside the world"
             region = [column[:self.y - yorig] for column in region]
             h = len(region[0])
@@ -360,13 +380,13 @@ class World:
             if len(chunks_involved[x_chunk]) > 2:
                 for y_chunk in range (1, len(chunks_involved[x_chunk]) - 1):
                     chunk = chunks_involved[x_chunk][y_chunk]
-                    #print chunk
-                    #print x_chunk, y_chunk
+                    print chunk
+                    print x_chunk, y_chunk
                     if chunk is not None:
                         slice_start = start + self.chunkwidth * (y_chunk - 1)
                         slice_end = slice_start + self.chunkwidth
-                        #print chunk.tiles[x_local]
-                        #print region[x][slice_start:slice_end]
+                        print chunk.tiles[x_local]
+                        print region[x][slice_start:slice_end]
                         chunk.tiles[x_local] = region[x][slice_start:slice_end]
             if len(chunks_involved[x_chunk]) > 1:
                 chunk = chunks_involved[x_chunk][-1]

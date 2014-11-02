@@ -68,7 +68,7 @@ class LeftActivate:
             if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2])\
             and region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3])\
             and region.clickable:
-                region.action1(app, button_event)
+                region.signal(1, app.mpos, button_event)
                 break
 
 class RightActivate:
@@ -78,7 +78,8 @@ class RightActivate:
             if region.rect[0] < app.mpos[0] < (region.rect[0] + region.rect[2])\
             and region.rect[1] < app.mpos[1] < (region.rect[1] + region.rect[3])\
             and region.clickable:
-                region.action2(app, button_event)
+                #Fuck up pygame, RMB is not mouse3
+                region.signal(3, app.mpos, button_event)
                 break
 
 class MemorySummary:
@@ -88,7 +89,8 @@ class MemorySummary:
 class Copy:
     def go(self, button_event, app):
         app.copy_buffer = app.active_world.get_rect(app.active_world.selection_rect, 
-                                                    app.active_world.selection_z)
+                                                    app.active_world.selection_z,
+                                                    debug=True)
 
 class Paste:
     def go(self, button_event, app):

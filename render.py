@@ -24,22 +24,6 @@ for i in files:
         except:
             other_images[i[:-4]] = pygame.image.load("assets/images/" + i).convert(32)
 
-class ScreenRegion:
-    def __init__(self, rect, app, image=None):
-        self.image = image
-        self.rect = rect
-        self.app = app
-        self.clickable = True
-
-    def draw(self):
-        self.app.screen.blit(self.image, self.rect)
-
-    def action1(self, *args, **kwargs):
-        return
-
-    def action2(self, *args, **kwargs):
-        return
-
 class TileTypeException(Exception):
     pass
 
@@ -54,6 +38,7 @@ def draw_world(world, player, screen, rect, crop=False):
     xoffset = player.x % 1
     yoffset = player.y % 1
     world_rect = (int(floor(player.x - xtiles/2)), int(floor(player.y - ytiles/2)), xtiles, ytiles)
+    #print world_rect
     #print "Passing %s to get_rect" % repr(world_rect)
     if not crop:
         #Draw the map straight to the screen
