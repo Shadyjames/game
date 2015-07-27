@@ -1,6 +1,6 @@
 import player as Player
 import world as World
-from render import draw_world
+from render import draw_world, tile_images, other_images
 import pygame
 import time
 
@@ -15,9 +15,11 @@ class ScreenRegion:
 
     def draw(self, offset):
         blit_rect = [self.rect[0] + offset[0], self.rect[1] + offset[1], self.rect[2], self.rect[3]]
-        self.app.screen.blit(self.image, blit_rect)
+        if self.image:
+            self.app.screen.blit(self.image, blit_rect)
+        
         for region in self.sub_regions:
-            region.draw([self.rect[0] + offset[0], self.rect[1] + offset[1]])
+            region.draw(blit_rect[:2])
 
     #Used for sending mouse signals recursively down the screenregion heirarchy.
     def signal(self, signal, mpos, button_event):
@@ -145,11 +147,54 @@ class WorldRegion(ScreenRegion):
     signal_handlers = {1:ClickTile, 3:PanWorld}
 
 class TileSelectButton(ScreenRegion):
-    def __init__(self, rect, app, tile_type, image=None):
-        ScreenRegion.__init__(self, rect, app, image)
+    def __init__(self, rect, app, tile_type):
+        ScreenRegion.__init__(self, rect, app)
+        self.image=tile_images[tile_type]
         self.tile_type = tile_type
 
     def SelectTileType(self, button_event):
         self.app.selected_tile_type = self.tile_type
         print self.app.selected_tile_type
     signal_handlers = {1:SelectTileType}
+
+class DropDownMenu(ScreenRegion):
+    def __init__(self, rect, app, items=[]):
+        ScreenRegion.__init__(self, rect, app)
+        self.items = items
+        self.deployed = False
+        self.max_simultaneous = 5
+        #Create the collapsed image for the dropdown
+        self.collapsed_image = pygame.Surface(rect[2:])
+        self.collapsed_image.fill(self.app.secondary_colour)
+        self.image = self.collapsed_image
+
+        #Create the deploy button
+        rect = [5, 5, self.rect[3] - 10, self.rect[3] - 10]
+        dropdown_button_image = pygame.Surface(rect[2:])
+        dropdown_button_image.fill(self.app.primary_colour)
+        self.dropdown_button = ScreenRegion(rect, self.app, image=dropdown_button_image)
+
+        self.refresh_items()
+
+    def refresh_items(self):
+        #And also adjust our own self.image and self.rect depending on deployed state in deploy_toggle()
+        #Create our sub_regions list for deployed, and not deployed.
+        ###LEFT OFF HERE
+
+        self.sub_regions = [region]
+
+    def add_item(self, item):
+        self.items.append(item)
+        self.refresh_items()
+
+
+    def remove_item(self, item):
+        self.items.remove(item)
+        self.refresh_items()
+
+    '''
+    def draw(self, offset):
+        print "COCKS"
+        screen = self.app.screen
+        blit_rect = [self.rect[0] + offset[0], self.rect[1] + offset[1], self.rect[2], self.rect[3]]
+    '''

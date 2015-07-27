@@ -7,7 +7,7 @@ from controls import load_controls
 from math import floor, ceil
 from copy import deepcopy
 from render import draw_world, screen, windowx, windowy, other_images, tile_images
-from ui import ScreenRegion, WorldRegion, TileSelectButton
+from ui import ScreenRegion, WorldRegion, TileSelectButton, DropDownMenu
 from main import App
 import editor_actions
 import editor_actions as actions
@@ -15,6 +15,7 @@ import time
 import os
 
 tilewidth = 32
+
 
 class MapEditor(App):
     def __init__(self):
@@ -24,6 +25,8 @@ class MapEditor(App):
 
         self.bottom_panel_height = 0.4
         self.side_panel_width = 0.3
+        self.primary_colour = (70, 70, 180)
+        self.secondary_colour = (30, 30, 100)
         self.config = ConfigParser.ConfigParser()
         self.config.read("settings.cfg")
         self.pure_bindings = bool(int(self.config.get('editor', 'pure_bindings')))
@@ -86,11 +89,12 @@ class MapEditor(App):
         self.screenregions.append(map_region)
         #Render sidebars    
         #Bottom panel
-        sidebar = other_images['editor_sidebar']
+        #sidebar = other_images['editor_sidebar']
         location = (0, int(round(self.windowy * (1 - self.bottom_panel_height))))
         dimensions = (int(round(self.windowx * (1- self.side_panel_width))), int(round(self.windowy * self.bottom_panel_height)))
         bottom_panel = pygame.Surface(dimensions)
-        pygame.transform.scale(sidebar, dimensions, bottom_panel)
+        bottom_panel.fill(self.secondary_colour)
+        #pygame.transform.scale(sidebar, dimensions, bottom_panel)
         region = ScreenRegion(location+dimensions, self, image=bottom_panel)
         self.screenregions.append(region)
 
@@ -98,7 +102,8 @@ class MapEditor(App):
         location = (int(round(self.windowx * (1 - self.side_panel_width))), 0)  
         dimensions = (int(round(self.windowx * self.side_panel_width)), int(round(self.windowy * (1 - self.bottom_panel_height))))
         side_panel = pygame.Surface(dimensions)
-        pygame.transform.scale(sidebar, dimensions, side_panel)
+        side_panel.fill(self.secondary_colour)
+        #pygame.transform.scale(sidebar, dimensions, side_panel)
         sidepane_region = ScreenRegion(location+dimensions, self, image=side_panel)
         self.screenregions.append(sidepane_region)
         
@@ -114,13 +119,15 @@ class MapEditor(App):
                 if tile_type in tile_images:
                     location = [self.tilewidth*j, self.tilewidth*i]
                     dimensions = [self.tilewidth, self.tilewidth]
-                    region = TileSelectButton(location+dimensions, self, tile_type, image=tile_images[tile_type])
+                    region = TileSelectButton(location+dimensions, self, tile_type)
                     sidepane_region.sub_regions.append(region)
                 else:
                     done = True
             i += 1
 
         ###TODO world save dropdown
+        region = DropDownMenu([0, 0, 200, 30], self)
+        self.screenregions.append(region)
         #YEAHBOI
 
 
