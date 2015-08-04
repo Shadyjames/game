@@ -3,11 +3,13 @@ import world as World
 from render import draw_world, tile_images, other_images
 import pygame
 import time
+import os
 
 class ScreenRegion:
     signal_handlers = {}
-    def __init__(self, rect, app, image=None):
+    def __init__(self, rect, app, image=None, text=None):
         self.image = image
+        self.text = text
         self.rect = rect
         self.app = app
         self.clickable = True
@@ -17,6 +19,11 @@ class ScreenRegion:
         blit_rect = [self.rect[0] + offset[0], self.rect[1] + offset[1], self.rect[2], self.rect[3]]
         if self.image:
             self.app.screen.blit(self.image, blit_rect)
+
+        if self.text:
+            font = pygame.font.Font(None, 36)
+            ourtext = font.render(self.text, 1, (255, 255, 255))
+            self.app.screen.blit(ourtext, blit_rect)
         
         for region in self.sub_regions:
             region.draw(blit_rect[:2])
@@ -38,7 +45,33 @@ class ScreenRegion:
         #If the click landed within no subregions, it was destined for us
         #Fire the signal handler
         if signal in self.signal_handlers:
-            self.signal_handlers[signal](self, button_event)
+            handler, args = self.signal_handlers[signal]
+            handler(self, button_event, *args)
+
+class ScreenRegionSignalsParent(ScreenRegion):
+    def __init__(self, rect, app, parent, **kwargs):
+        ScreenRegion.__init__(self, rect, app, **kwargs)
+        self.parent = parent
+
+    #Used for sending mouse signals recursively down the screenregion heirarchy.
+    def signal(self, signal, mpos, button_event):
+        #Before comparing to subregions, convert to local coordinates
+        mpos = [mpos[0] - self.rect[0], mpos[1] - self.rect[1]]
+        #Ascertain which region we have clicked within
+        for region in reversed(self.sub_regions):
+            if region.clickable\
+            and region.rect[0] < mpos[0] < (region.rect[0] + region.rect[2])\
+            and region.rect[1] < mpos[1] < (region.rect[1] + region.rect[3]):
+                #Pass the signal down to the next region in the heirarchy
+                
+                region.signal(signal, mpos, button_event)
+                return
+
+        #If the click landed within no subregions, it was destined for us
+        #Fire the signal handler
+        if signal in self.signal_handlers:
+            handler, args = self.signal_handlers[signal]
+            handler(button_event, *args)
 
 class WorldRegion(ScreenRegion):
     def __init__(self, rect, app):
@@ -144,7 +177,7 @@ class WorldRegion(ScreenRegion):
         #print self.world.selection_end
         #print self.world.selection_start
 
-    signal_handlers = {1:ClickTile, 3:PanWorld}
+    signal_handlers = {1:(ClickTile, ()), 3:(PanWorld, ())}
 
 class TileSelectButton(ScreenRegion):
     def __init__(self, rect, app, tile_type):
@@ -155,46 +188,77 @@ class TileSelectButton(ScreenRegion):
     def SelectTileType(self, button_event):
         self.app.selected_tile_type = self.tile_type
         print self.app.selected_tile_type
-    signal_handlers = {1:SelectTileType}
+    signal_handlers = {1:(SelectTileType,())}
 
 class DropDownMenu(ScreenRegion):
     def __init__(self, rect, app, items=[]):
         ScreenRegion.__init__(self, rect, app)
+        self.collapsed_rect = self.rect[:]
         self.items = items
+        #TODO: REMOVE
+        self.items = ['Honk', 'Badonkadonk']
         self.deployed = False
         self.max_simultaneous = 5
         #Create the collapsed image for the dropdown
         self.collapsed_image = pygame.Surface(rect[2:])
-        self.collapsed_image.fill(self.app.secondary_colour)
+        self.collapsed_image.fill(self.app.primary_colour)
         self.image = self.collapsed_image
 
         #Create the deploy button
         rect = [5, 5, self.rect[3] - 10, self.rect[3] - 10]
+        rect = [self.rect[2] - (self.rect[3] - 5), 5, self.rect[3] - 10, self.rect[3] - 10]
         dropdown_button_image = pygame.Surface(rect[2:])
-        dropdown_button_image.fill(self.app.primary_colour)
-        self.dropdown_button = ScreenRegion(rect, self.app, image=dropdown_button_image)
+        #dropdown_button_image.fill(self.app.primary_colour)
+        dropdown_button_image.fill((155, 155, 155))
+        self.dropdown_button_image = dropdown_button_image
+        self.dropdown_button = ScreenRegionSignalsParent(rect, self.app, self, image=dropdown_button_image)
+        self.dropdown_button.signal_handlers = {1:(self.toggle_deploy, ())}
+        self.sub_regions = [self.dropdown_button]
 
-        self.refresh_items()
+        self.update()
 
-    def refresh_items(self):
-        #And also adjust our own self.image and self.rect depending on deployed state in deploy_toggle()
-        #Create our sub_regions list for deployed, and not deployed.
-        ###LEFT OFF HERE
-
-        self.sub_regions = [region]
+    #To be called externally whenever the contents of the menu needs to be updated. Intended to be overridden
+    def update(self):
+        pass
 
     def add_item(self, item):
         self.items.append(item)
-        self.refresh_items()
-
+        self.refresh()
 
     def remove_item(self, item):
         self.items.remove(item)
-        self.refresh_items()
+        self.refresh()
 
-    '''
-    def draw(self, offset):
-        print "COCKS"
-        screen = self.app.screen
-        blit_rect = [self.rect[0] + offset[0], self.rect[1] + offset[1], self.rect[2], self.rect[3]]
-    '''
+    def toggle_deploy(self, button_event):
+        if button_event == "up":
+            print "BADONKADONK"
+            if self.deployed:
+                print "Deployed: collapsing"
+                self.rect = self.collapsed_rect
+                self.sub_regions = [self.dropdown_button]
+            else:
+                print "Not deployed: Deploying"
+                #Add the buttons for each item, and expand the rect to house all the new entries
+                self.rect = self.collapsed_rect[:]
+                self.rect[3] = self.rect[3] * (len(self.items) + 1)
+                for i in range(len(self.items)):
+                    item = self.items[i]
+                    screenregion = ScreenRegionSignalsParent([0, (i+1)*self.collapsed_rect[3], self.collapsed_rect[2], self.collapsed_rect[3]], self.app, self, image=self.image, text=item)
+                    screenregion.signal_handlers = {1:(self.select_item, (item,))}
+                    self.sub_regions.append(screenregion)
+
+            self.deployed = not self.deployed
+
+    def select_item(self, button_event, item):
+        if button_event == "up":
+            print item
+            self.selected_item = item
+            self.text = item
+            self.toggle_deploy(button_event)
+        
+class ListDirDropDownMenu(DropDownMenu):
+    def __init__(self, rect, app, target_dir):
+        self.target_dir = target_dir
+        DropDownMenu.__init__(self, rect, app, items=[])
+    def update(self):
+        self.items = os.listdir(self.target_dir)

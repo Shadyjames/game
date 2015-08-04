@@ -1,4 +1,5 @@
 import sys
+import pygame
 from pympler import tracker
 tr = tracker.SummaryTracker()
 
@@ -59,7 +60,8 @@ class Player_MoveLeft:
 
 class Quit:
     def go(self, key_event, app):
-        sys.exit()
+        print "Quit activated"
+        app.running = False
 
 class LeftActivate:
     def go(self, button_event, app):

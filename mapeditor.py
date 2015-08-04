@@ -7,7 +7,7 @@ from controls import load_controls
 from math import floor, ceil
 from copy import deepcopy
 from render import draw_world, screen, windowx, windowy, other_images, tile_images
-from ui import ScreenRegion, WorldRegion, TileSelectButton, DropDownMenu
+from ui import ScreenRegion, WorldRegion, TileSelectButton, ListDirDropDownMenu
 from main import App
 import editor_actions
 import editor_actions as actions
@@ -69,9 +69,12 @@ class MapEditor(App):
             
             self.redraw()
             self.do_input()
+            if not self.running:
+                break
             
             #Render to the display
             pygame.display.flip()
+        pygame.quit()
 
     def draw(self):
         #Render world 0 to the main window
@@ -79,6 +82,7 @@ class MapEditor(App):
         map_y = (1 - self.bottom_panel_height) * self.windowy
         map_rect = (0, 0, map_x, map_y)
         map_region = WorldRegion(map_rect, self)
+        self.map_region = map_region
         self.screenregions.append(map_region)
 
         #Render world 1 to the corner
@@ -86,6 +90,7 @@ class MapEditor(App):
         map_y = self.bottom_panel_height * self.windowy
         map_rect = ((1 - self.side_panel_width) * self.windowx, (1 - self.bottom_panel_height) * self.windowy, map_x, map_y)
         map_region = WorldRegion(map_rect, self)
+        self.minimap_region = map_region
         self.screenregions.append(map_region)
         #Render sidebars    
         #Bottom panel
@@ -126,13 +131,20 @@ class MapEditor(App):
             i += 1
 
         ###TODO world save dropdown
-        region = DropDownMenu([0, 0, 200, 30], self)
+        region = ListDirDropDownMenu([5, (1-self.bottom_panel_height) * windowy + 5, 200, 30], self, 'maps')
+        self.world_save_dropdown = region
         self.screenregions.append(region)
         #YEAHBOI
 
+        #Create world save button
+        save_button = ScreenRegionSignalsParent([205, (1-self.bottom_panel_height) * windowy + 5, 150, 30], self, text="Save"
+        ###LEFT OFF HERE
+        #Wrote self.call_with_textfield_arg for the many times we may need to call a function where the arg is specified as the value of a textfield
+        #Textfield hasn't been written yet but it will be a pretty basic ScreenRegion subclass that does something like hotswap app.controls to take total control of the keyboard as long as it has focus. Once we have the user able to type in a filename and save/load the file to/from it, we can begin on the more interesting things.....like elevation
+        save_button.signal_handlers = {1:self.call_with_textfield_arg, (self.world.save, world_save_filename_field)}
 
-
-
+    def call_with_textfield_arg(self, function, textfield, *args):
+        function(textfield.value, *args)
 
     def redraw(self):
         for region in self.screenregions:

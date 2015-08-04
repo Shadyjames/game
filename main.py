@@ -16,6 +16,7 @@ last_time = time.clock()
 
 class App:
     def __init__(self):
+        pygame.font.init()
         self.running = True
         self.last_time = time.clock()
         self.config = ConfigParser.ConfigParser()
@@ -104,11 +105,17 @@ class Game(App):
             draw_world(self.world, self.player, self.screen, (45, 45, 640, 480), crop=True)
             pygame.display.flip()
             self.do_input()
+            print "WHAT0"
+            if not self.running:
+                print "WHAT"
+                break
             self.translate()
             self.timer()
             self.collide()
 
+        print "Calling pygame.quit"
         pygame.quit()
+        print "called pygame.quit"
 
 
     def translate(self):
