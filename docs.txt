@@ -1,0 +1,38 @@
+PART 1. World
+The world is currently stored as a chunked 3-dimensional array of Tile objects. A Tile currently has only two attributes: Type and Occupant. Occupant will be a pointer to an object that represents some Physical object which occupies that tile in the world - this could be something like a Tree, or a Chest, or a Door. What the class of these static world objects will look like is still undetermined, but most of their job will be to easily act as, or respond to, triggers placed during map creation. So its attributes will probably mostly consist of lists of callbacks for various things that can happen to it.
+
+Summary of noteworthy attributes:
+World has => .x/y/z    | world dimensions
+			 .chunks   | 3-dimensional list of chunks (Starts as all None because chunks will be dynamically loaded from disk / freed from memory eventually)
+Chunk has => .tiles    | 3-dimensional list of Tile objects
+Tile has =>  .type     | Integer representing what texture to use (eventually terrain will have other significance)
+			 .occupant | Placeholder. Occupant class not yet implemented (or even named)
+WorldObject (Not Implemented): Static tile occupant class, will contain a bunch of callbacks for various triggers
+
+Todos (in order):
+1. Collision
+2. Gravity
+3. Rendering all relevant z-levels (will require addition of a "side" texture to distinguish between ie. dirt floor and dirt cliff)
+
+PART 2. Inventory
+The player will not have an inventory in this game. The player will acquire abilities the way items usually are in other games, and then upgrade these abilities with currency.
+
+Enemies however, may utilise items. There are plans to prototype enemies be generated/placed with items of varying power (at the discretion of the map creator), which would then self-destruct after a short time on the ground. 
+Imagine for a moment, that an enemy has been generated with the Fully Sick Machine Gun Of Ultimate Rape. This would initially create a tunnel-vision challenge for the player, which is something you find in stacks of games which have high-damage low-hp enemies. This is not the goal however. The goal is to create interesting area-denial/item-tracking gameplay where players need to know what powerful items are on the board, where, and do their best to neutralise them.
+Likewise they may be generated/placed with varying armors which may provide elemental resistances or simple damage reduction coeffecients and movespeed buffs/penalties to make every enemy slightly unique, even as they continue to operate within the constraints of their race and unit type. it will be *extremely important* to make all of these items easily visually identifiable by the player.
+
+Todos (in order):
+1. Item abstraction for weapons/armor/consumables.
+	- Ranged weapons will be a great opportunity to use a combination of the PhysicsObject accelleration abstraction, and gravity, to do some great stuff. We can just set the projectiles initial velocity, as well as an "air friction" vs "ground friction" so that even after they hit the ground they slide on hard surfaces. NOTE: projectiles sliding on the ground, while awesome, might be a terrible idea. Its important for the player to know which projectiles are "Live" and which ones are just sliding, and this needs to be visually obvious somehow.
+	- Melee weapons and spells will probably end up being the same thing: create some (probably moving) collision zone. On collision, trigger effect (probably deal damage). Whether its a sword or a fireball matters very little - all that matters is that neither swords nor fireballs will be PhysicsObjects like ranged projectiles.
+
+2. (When NPC is done) The ability to render npcs differently based on what item type and item they are holding. NPC's of each type will have a "gun" stance and a "bow" stance etc, and the bow should just be rendered into that. May involve multiple layers (render NPC-in-that-stance layer 0 "shit the weapon is allowed to be in front of", render weapon, render NPC layer 1 "shit the weapon is not allowed to be in front of". This way the weapon will always kind of be between their arms visually).
+
+PART 3. UI
+There is some extremely rudimentary UI features implemented in ui.py
+The general gist is that everything which occupies a region of the screen is a ScreenRegion or some subclass. ScreenRegions are arranged in a tree structure to minimise lookup times on click. They also have a draw() method which by default is just to render self.image to the region of the screen dictated by their bounding box. However there is an example of more advanced logic in the WorldRegion class whose draw() method renders a region of the game world inside a rect.
+
+Summary of noteworthy classes/attributes:
+ScreenRegion has => .sub_regions | List of ScreenRegions. Yay for trees!
+WorldRegion: ScreenRegion that renders self.world centred on self.camera (a Player instance, but when Player gets further abstracted it'll probably just be WorldEntity or something since its really just a camera)
+TileSelectButton/DropDownMenu/ListDirDropDownMenu: A bunch of random UI elements I wrote. Maybe they are terrible? Writing them made me want to kill myself, but looking at them they don't seem like abominations, I think they're probably fine and its just that its painful to write all of the hundred common human/computer interaction idioms like drop-down menus yourself.

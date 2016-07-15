@@ -4,6 +4,12 @@ from render import draw_world, tile_images, other_images
 import pygame
 import time
 import os
+from util import defaultdict
+from actions import LeftActivate, RightActivate
+
+MOUSE1 = len(pygame.key.get_pressed()) + 1
+# Mouse3 is right click. FUCK YOU PYGAME
+MOUSE3 = len(pygame.key.get_pressed()) + 3
 
 class ScreenRegion:
     signal_handlers = {}
@@ -14,6 +20,10 @@ class ScreenRegion:
         self.app = app
         self.clickable = True
         self.sub_regions = []
+
+    def gains_focus(self):
+        if self.app.object_with_focus not in [self, None]:
+            self.app.object_with_focus.loses_focus()
 
     def draw(self, offset):
         blit_rect = [self.rect[0] + offset[0], self.rect[1] + offset[1], self.rect[2], self.rect[3]]
@@ -146,7 +156,7 @@ class WorldRegion(ScreenRegion):
                 delta = [(self.app.last_mpos[i] - self.app.mpos[i]) / float(self.app.tilewidth) for i in range(2)]
             except:
                 #Whoa! What a fuckin' edge case
-                #....what edge case IS this? how does this fix even work?
+                #....what edge case IS this? how does this fix even work? The above comment is all that existed pertaining to it.
                 print "COCKSCOCKSCOCKSCOCKSCOCKS"
                 print "COCKSCOCKSCOCKSCOCKSCOCKS"
                 print "COCKSCOCKSCOCKSCOCKSCOCKS"
@@ -164,6 +174,7 @@ class WorldRegion(ScreenRegion):
             last_frame_time = frame_time
 
     def ClickTile(self, button_event):
+        self.gains_focus()
         #Set selection to region between drag start and finish
         if button_event == "down":
             self.world.selection_start = self.pos_to_coords(self.app.mpos)
@@ -186,6 +197,7 @@ class TileSelectButton(ScreenRegion):
         self.tile_type = tile_type
 
     def SelectTileType(self, button_event):
+        self.gains_focus()
         self.app.selected_tile_type = self.tile_type
         print self.app.selected_tile_type
     signal_handlers = {1:(SelectTileType,())}
@@ -230,6 +242,7 @@ class DropDownMenu(ScreenRegion):
         self.refresh()
 
     def toggle_deploy(self, button_event):
+        self.gains_focus()
         if button_event == "up":
             print "BADONKADONK"
             if self.deployed:
@@ -249,6 +262,9 @@ class DropDownMenu(ScreenRegion):
 
             self.deployed = not self.deployed
 
+    def loses_focus(self):
+        self.deployed = False
+
     def select_item(self, button_event, item):
         if button_event == "up":
             print item
@@ -262,3 +278,33 @@ class ListDirDropDownMenu(DropDownMenu):
         DropDownMenu.__init__(self, rect, app, items=[])
     def update(self):
         self.items = os.listdir(self.target_dir)
+    
+
+class TextField(ScreenRegion):
+    def __init__(self, *args, **kwargs):
+        ScreenRegion.__init__(self, *args, **kwargs)
+        self.textbox_controls = {}
+        for mod_combo in [(False, False, False), (False, False, True)]:
+            self.textbox_controls[mod_combo] = defaultdict(lambda key: self.type_key)
+            self.textbox_controls[mod_combo][MOUSE1] = LeftActivate
+            self.textbox_controls[mod_combo][MOUSE3] = RightActivate
+        self.text = "dongs"
+
+    def gains_focus(self):
+        # Should probably standardise the superclass calls :| I think i started this project before i knew about super()
+        super(TextField, self).gains_focus()
+        self.app_controls = self.app.controls
+        self.app_pure_bindings = self.app.pure_bindings
+        
+        self.app.pure_bindings = False
+        self.app.controls = self.textbox_controls
+
+    def type_key(self, inkey):
+        if inkey == K_BACKSPACE:
+          current_string = current_string[0:-1]
+        elif inkey == K_RETURN:
+          return # Later textfields will "submit" on ENTER
+        elif inkey == K_MINUS:
+          current_string.append("_")
+        elif inkey <= 127:
+          current_string.append(chr(inkey))

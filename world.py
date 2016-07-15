@@ -16,11 +16,12 @@ class World:
         self.chunks = self.new_chunklist()
         self.fill(2)
         #self.coordinate_fill()
-        '''
         self.save('test')
+        '''
         self.save_chunks('test', [[3, 3, 0]])
+        
         self.empty()
-        self.load_chunks('test', [[3, 3, 0]])
+        self.load_chunks('test', [[3, 3, 0]]) # Load chunks not working?
         self.load('test')
         '''
 
@@ -322,6 +323,7 @@ class World:
         w = len(region)
         h = len(region[0])
         if xorig < 0 or yorig < 0 or w <= 0 or h <= 0 or self.x < xorig or self.y < yorig:
+            # Pasting outside the map? We have no time for THAT funny business
             raise Exception("The fuck is this shit")
         if xorig + w - 1 > self.x:
             print xorig, w, self.x

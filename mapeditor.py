@@ -7,7 +7,7 @@ from controls import load_controls
 from math import floor, ceil
 from copy import deepcopy
 from render import draw_world, screen, windowx, windowy, other_images, tile_images
-from ui import ScreenRegion, WorldRegion, TileSelectButton, ListDirDropDownMenu
+from ui import ScreenRegion, WorldRegion, TileSelectButton, ListDirDropDownMenu, TextField
 from main import App
 import editor_actions
 import editor_actions as actions
@@ -23,10 +23,14 @@ class MapEditor(App):
         self.worldname = 'test'
         self.last_frame_time = time.clock()
 
+        # UI pane sizes expressed as fraction of window size
         self.bottom_panel_height = 0.4
         self.side_panel_width = 0.3
+
+        # UI colour scheme
         self.primary_colour = (70, 70, 180)
         self.secondary_colour = (30, 30, 100)
+
         self.config = ConfigParser.ConfigParser()
         self.config.read("settings.cfg")
         self.pure_bindings = bool(int(self.config.get('editor', 'pure_bindings')))
@@ -34,6 +38,8 @@ class MapEditor(App):
         self.windowy = windowy
         self.screen = screen
         self.tilewidth = tilewidth
+
+        self.object_with_focus = None
 
         #Globals for mouse actions that persist between frames
         self.active_world = None
@@ -46,7 +52,6 @@ class MapEditor(App):
         #First two worlds are the ones you see on the screen, third is copy buffer
         self.copybuffer = World.World()
 
-        #Import tile images from render.py
         self.controls = load_controls('editor_bindings')
 
 
@@ -137,11 +142,12 @@ class MapEditor(App):
         #YEAHBOI
 
         #Create world save button
-        save_button = ScreenRegionSignalsParent([205, (1-self.bottom_panel_height) * windowy + 5, 150, 30], self, text="Save"
+        save_button = ScreenRegion([205, (1-self.bottom_panel_height) * windowy + 5, 150, 30], self, text="Save")
+        world_save_filename_field = TextField([205, (1-self.bottom_panel_height) * windowy + 15, 150, 30], self)
         ###LEFT OFF HERE
         #Wrote self.call_with_textfield_arg for the many times we may need to call a function where the arg is specified as the value of a textfield
         #Textfield hasn't been written yet but it will be a pretty basic ScreenRegion subclass that does something like hotswap app.controls to take total control of the keyboard as long as it has focus. Once we have the user able to type in a filename and save/load the file to/from it, we can begin on the more interesting things.....like elevation
-        save_button.signal_handlers = {1:self.call_with_textfield_arg, (self.world.save, world_save_filename_field)}
+        save_button.signal_handlers = {1:(self.call_with_textfield_arg, (self.world.save, world_save_filename_field))}
 
     def call_with_textfield_arg(self, function, textfield, *args):
         function(textfield.value, *args)
