@@ -75,20 +75,32 @@ class App:
             for key, control in self.controls.iteritems():
                 self.update_control(control, keypresses[key])
         else:
-            mods = tuple\
+            # Get the current modifier arrangement (ctrl/alt/shift held)
+            current_modifiers = tuple\
                     ([
                         any([keypresses[pygame.K_LCTRL], keypresses[pygame.K_RCTRL]]),
                         any([keypresses[pygame.K_LALT], keypresses[pygame.K_RALT]]),
                         any([keypresses[pygame.K_LSHIFT], keypresses[pygame.K_RSHIFT]])
                     ])
-            primary_controls = self.controls.get(mods, {})
-            secondary_controls = self.controls[(False, False, False)]
+            # We will also continue to update no-modifier bindings
+            no_modifiers = (False, False, False)
+            primary_controls = self.controls.get(current_modifiers, {})
+            secondary_controls = self.controls[no_modifiers]
+
+            # Update bindings for this modifier pattern
             for key, control in primary_controls.iteritems():
                 self.update_control(control, keypresses[key])
-            #If there's modifier keys held down, don't halt all activity on keys that use non-modifier bindings
+            
+            # Update non-modifier bindings
             for key, control in secondary_controls.iteritems():
                 if key not in primary_controls:
                     self.update_control(control, keypresses[key])
+
+            # Finally, update every other binding with False to indicate it is not depressed (since the modifier pattern does not match)
+            for modifiers, controls in self.controls.items():
+                if modifiers not in [no_modifiers, current_modifiers]:
+                    for key, control in controls.iteritems():
+                        self.update_control(control, False)
 
 class Game(App):
     def __init__(self):

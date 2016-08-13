@@ -184,8 +184,9 @@ class WorldRegion(ScreenRegion):
             self.app.active_world = self.world
 
         self.world.selection_z = self.camera.z
-        #print self.world.selection_start
-        #print self.world.selection_end
+        print "This is selection start/end"
+        print self.world.selection_start
+        print self.world.selection_end
         #print self.world.selection_start
 
     signal_handlers = {1:(ClickTile, ()), 3:(PanWorld, ())}

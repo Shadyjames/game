@@ -20,9 +20,12 @@ files = os.listdir("assets/images")
 for i in files:
     if i[-4:] == ".png":
         try:
-            tile_images[int(i[:-4])] = pygame.image.load("assets/images/" + i).convert(32)
-        except:
+            tile_images[int(i[:-4])] = pygame.transform.scale(pygame.image.load("assets/images/" + i).convert(32), (32, 32))
+        except ValueError:
             other_images[i[:-4]] = pygame.image.load("assets/images/" + i).convert(32)
+        except:
+            import traceback
+            traceback.print_exc()
 
 class TileTypeException(Exception):
     pass

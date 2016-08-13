@@ -5,7 +5,12 @@ import sys
 tilewidth = 32
 
 class World:
-    def __init__(self, x=10, y=10, z=10, chunkwidth=3):
+    def __init__(self, x=12, y=12, z=1, chunkwidth=3):
+        '''World(x=12, y=12, z=1, chunkwidth=3)
+        x and y MUST be divisible by chunkwidth. Behaviour for (x mod chunkwidth) != 0 is undefined
+        '''
+        assert (x % chunkwidth) == 0
+        assert (y % chunkwidth) == 0
         self.x = x
         self.y = y
         self.z = z
@@ -33,11 +38,13 @@ class World:
             raise Exception("File does not exist")
 
         self.x, self.y, self.z = [int(f.read(16).encode('hex'), 16) for i in range(3)]
+        print self.x, self.y, self.z
 
         self.chunks = self.new_chunklist()
+        print self.chunks
         for x in range(len(self.chunks)):
             for y in range(len(self.chunks[x])):
-                for z in range(len(self.chunks[y])):
+                for z in range(len(self.chunks[x][y])):
                     self.chunks[x][y][z] = self.chunk_from_bytes(f.read(self.chunksize))
 
 
@@ -230,6 +237,7 @@ class World:
         #Shortern to point a, point b
         a = self.selection_start
         b = self.selection_end
+        print a, b
         rect = [a[0] if a[0] < b[0] else b[0], 
                 a[1] if a[1] < b[1] else b[1], 
                 abs(a[0] - b[0]) + 1,
@@ -324,6 +332,8 @@ class World:
         h = len(region[0])
         if xorig < 0 or yorig < 0 or w <= 0 or h <= 0 or self.x < xorig or self.y < yorig:
             # Pasting outside the map? We have no time for THAT funny business
+            print xorig, yorig
+            print self.x, self.y
             raise Exception("The fuck is this shit")
         if xorig + w - 1 > self.x:
             print xorig, w, self.x
