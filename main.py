@@ -1,7 +1,7 @@
 #Main file for mah game.
 import pygame
 import time
-import world as World
+import world
 import player as Player
 #import player as Player
 import ConfigParser
@@ -9,6 +9,7 @@ from controls import load_controls
 from render import screen, draw_world, windowx, windowy
 from math import floor
 import actions
+import random
 import os
 
 last_time = time.clock()
@@ -28,8 +29,12 @@ class App:
         self.screen = screen
         self.mpos = None
         self.last_mpos = None
+        self.time_since_last_frame = 0
+        self.time_of_last_frame = time.clock()
         
-        self.world = World.World(x=int(self.config.get('world', 'x')), y=int(self.config.get('world', 'y')), z=10)
+        self.world = world.World(x=int(self.config.get('world', 'x')), y=int(self.config.get('world', 'y')), z=10)
+        for i in range(10):
+            self.world.set(world.Tile(5), i, 0)
         #world.load()
 
         #Load control bindings
@@ -117,7 +122,6 @@ class Game(App):
             draw_world(self.world, self.player, self.screen, (45, 45, 640, 480), crop=True)
             pygame.display.flip()
             self.do_input()
-            print "WHAT0"
             if not self.running:
                 print "WHAT"
                 break
@@ -131,7 +135,7 @@ class Game(App):
 
 
     def translate(self):
-        self.player.update()
+        self.player.update(self.time_since_last_frame, self.world)
         #Move everything
         #dicks
         pass
@@ -142,9 +146,11 @@ class Game(App):
 
     def timer(self):
         #Check timed objects against the global timer
-        global last_time
-        print str(1.0 / (time.clock() - last_time)) + " FPS"
-        last_time = time.clock()
+        if random.randint(0, 299) == 0:
+            fps = 1.0 / (time.clock() - self.time_of_last_frame)
+            print "%s FPS" % fps
+        self.time_since_last_frame = time.clock() - self.time_of_last_frame 
+        self.time_of_last_frame = time.clock()
 
     def render(self):
         #Render the scene

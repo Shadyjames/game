@@ -4,6 +4,15 @@ import os
 import sys
 tilewidth = 32
 
+tile_properties = [
+    {"collision":False, "friendly_name": "Black"},
+    {"collision":False, "friendly_name": "Shit grass"},
+    {"collision":False, "friendly_name": "Happyface"},
+    {"collision":False, "friendly_name": "Sand"},
+    {"collision":False, "friendly_name": "Green grass"},
+    {"collision":True, "friendly_name": "Rock"}
+]
+
 class World:
     def __init__(self, x=12, y=12, z=1, chunkwidth=3):
         '''World(x=12, y=12, z=1, chunkwidth=3)
@@ -29,6 +38,7 @@ class World:
         self.load_chunks('test', [[3, 3, 0]]) # Load chunks not working?
         self.load('test')
         '''
+        self.entities = []
 
     def load(self, filename):
         path = os.path.join('save', filename + '.world')
@@ -435,6 +445,14 @@ class Tile:
 
         #Tiles may be occupied by things like chests and doors
         self.occupant = None
+
+    @property
+    def collision(self):
+        if self.occupant and self.occupant.collision:
+            return True
+        else:
+            return tile_properties[self.type]['collision']
+
 
     def __repr__(self):
         return "<Tile, type=%s>" % self.type
