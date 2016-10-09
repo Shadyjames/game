@@ -245,13 +245,15 @@ class World:
     def selection_rect(self):
         #app.active_world.selection_* is TOO MANY LETTERS
         #Shortern to point a, point b
-        a = self.selection_start
-        b = self.selection_end
+        a = self.selection_start[:]
+        a = (int(floor(a[0])), int(floor(a[1])))
+        b = self.selection_end[:]
+        b = (int(ceil(b[0])), int(ceil(b[1])))
         print a, b
         rect = [a[0] if a[0] < b[0] else b[0], 
                 a[1] if a[1] < b[1] else b[1], 
-                abs(a[0] - b[0]) + 1,
-                abs(a[1] - b[1]) + 1]
+                abs(a[0] - b[0]),
+                abs(a[1] - b[1])]
         return rect
 
     #Returns a flat region of a world. Avoids chunk lookup calculations used in get()

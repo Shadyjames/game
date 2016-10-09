@@ -1,5 +1,6 @@
 import sys
 import pygame
+from math import floor
 from pympler import tracker
 tr = tracker.SummaryTracker()
 
@@ -96,7 +97,7 @@ class Copy:
 
 class Paste:
     def go(self, button_event, app):
-        app.active_world.set_rect(  app.active_world.selection_start, 
+        app.active_world.set_rect(  [int(floor(value)) for value in app.active_world.selection_start], 
                                     app.copy_buffer, 
                                     app.active_world.selection_z)
 
