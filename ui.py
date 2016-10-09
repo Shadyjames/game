@@ -6,6 +6,8 @@ import time
 import os
 from util import defaultdict
 from actions import LeftActivate, RightActivate
+import random
+from math import floor, ceil
 
 MOUSE1 = len(pygame.key.get_pressed()) + 1
 # Mouse3 is right click. FUCK YOU PYGAME
@@ -99,8 +101,13 @@ class WorldRegion(ScreenRegion):
 
         if self.world.selection_start is not None:
             #Draw the selection area
-            start_pos = self.coords_to_pos(self.world.selection_start)
-            end_mpos = self.coords_to_pos(self.world.selection_end)
+            start_pos = self.screen_from_world([floor(value) for value in self.world.selection_start], debug)
+            end_mpos = self.screen_from_world([floor(value) for value in self.world.selection_end], debug)
+
+            if debug:
+                print start_pos
+                print end_mpos
+
             rect = [
                     end_mpos[0] if end_mpos[0] < start_pos[0] else start_pos[0],
                     end_mpos[1] if end_mpos[1] < start_pos[1] else start_pos[1],
@@ -127,28 +134,34 @@ class WorldRegion(ScreenRegion):
                 selection_area.fill((0, 0, 255))
                 selection_area.set_alpha(100)
                 screen.blit(selection_area, rect[:2])#(xorig, yorig))
-            
 
-    #NO TOUCHIE
-    """
-    #Wooh arithmetic
-    def pos_to_coords(self, pos):
-        return (int((pos[0] + self.camera.x * self.app.tilewidth - self.rect[0]) / self.app.tilewidth - int(self.rect[2] / (2 * self.app.tilewidth))) - 1,
-                int((pos[1] + self.camera.y * self.app.tilewidth - self.rect[1]) / self.app.tilewidth - int(self.rect[3] / (2 * self.app.tilewidth))) - 1)
+    def screen_from_world(self, coords):
+        # calculates screen draw coordinates from world coordinates
+        xorig, yorig, w, h = self.rect
+        
+        # world_*orig == World coordinate at xorig
+        # *offset == screen distance between left of world, and left of world render box
+        world_xorig = self.camera.x - w / 2.0 / self.app.tilewidth
+        xoffset = xorig - world_xorig * self.app.tilewidth
+        screen_x = xoffset + coords[0] * self.app.tilewidth
 
-    def coords_to_pos(self, coords):
-        return ((coords[0] + 1 + int(self.rect[2] / (2 * self.app.tilewidth))) * self.app.tilewidth - self.camera.x * self.app.tilewidth + self.rect[0],
-                (coords[1] + 1 + int(self.rect[3] / (2 * self.app.tilewidth))) * self.app.tilewidth - self.camera.y * self.app.tilewidth + self.rect[1])
-    """
+        world_yorig = self.camera.y - h / 2.0 / self.app.tilewidth
+        yoffset = yorig - world_yorig * self.app.tilewidth
+        screen_y = yoffset + coords[1] * self.app.tilewidth
+        return (screen_x, screen_y)
 
-    #Wooh arithmetic
-    def pos_to_coords(self, pos):
-        return (int((pos[0] + self.camera.x * self.app.tilewidth - self.rect[0]) / self.app.tilewidth - int(self.rect[2] / (2 * self.app.tilewidth))) - 1,
-                int((pos[1] + self.camera.y * self.app.tilewidth - self.rect[1]) / self.app.tilewidth - int(self.rect[3] / (2 * self.app.tilewidth))) - 1)
+    def world_from_screen(self, coords):
+        # Calculate world coordinates from screen coordinates
+        xorig, yorig, w, h = self.rect
 
-    def coords_to_pos(self, coords):
-        return ((coords[0] + 1 + int(self.rect[2] / (2 * self.app.tilewidth))) * self.app.tilewidth - self.camera.x * self.app.tilewidth + self.rect[0],
-                (coords[1] + 1 + int(self.rect[3] / (2 * self.app.tilewidth))) * self.app.tilewidth - self.camera.y * self.app.tilewidth + self.rect[1])
+        world_xorig = self.camera.x - w / 2.0 / self.app.tilewidth
+        world_xoffset = float(xorig) / self.app.tilewidth - world_xorig
+        world_x = float(coords[0]) / self.app.tilewidth - world_xoffset
+
+        world_yorig = self.camera.y - h / 2.0 / self.app.tilewidth
+        world_yoffset = float(yorig) / self.app.tilewidth - world_yorig
+        world_y = float(coords[1]) / self.app.tilewidth - world_yoffset
+        return (world_x, world_y)
 
     def PanWorld(self, button_event):
         if button_event != "down":
@@ -177,16 +190,17 @@ class WorldRegion(ScreenRegion):
         self.gains_focus()
         #Set selection to region between drag start and finish
         if button_event == "down":
-            self.world.selection_start = self.pos_to_coords(self.app.mpos)
-            self.world.selection_end = self.pos_to_coords(self.app.mpos)
+            self.world.selection_start = self.world_from_screen(self.app.mpos)
+            self.world.selection_end = self.world_from_screen(self.app.mpos)
         else:
-            self.world.selection_end = self.pos_to_coords(self.app.mpos)
+            self.world.selection_end = self.world_from_screen(self.app.mpos)
             self.app.active_world = self.world
 
         self.world.selection_z = self.camera.z
-        print "This is selection start/end"
-        print self.world.selection_start
-        print self.world.selection_end
+        if button_event == "up":
+            print "This is selection start/end"
+            print self.world.selection_start
+            print self.world.selection_end
         #print self.world.selection_start
 
     signal_handlers = {1:(ClickTile, ()), 3:(PanWorld, ())}
