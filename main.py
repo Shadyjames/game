@@ -23,7 +23,7 @@ class App:
         self.config = ConfigParser.ConfigParser()
         self.config.read("settings.cfg")
         #self.player = Player.Player([20.5, 12.5, 0], self.config)
-        self.player = Player.Player([0.5, 0.5, 0], self.config)
+        self.player = Player.Player([1.5, 1.5, 0], self.config)
         self.windowx = windowx
         self.windowy = windowy
         self.tilewidth = 32
@@ -125,12 +125,8 @@ class Game(App):
             event = pygame.event.poll()
             if event.type == pygame.QUIT:
                 self.running = False
-            world_render_rect = (45, 45, 640, 480) # Off by half a tile
-            world_render_rect = (0, 0, 64, 64) # working?
-            world_render_rect = (45, 45, 640, 180) # Off by a fifth of a tile
-            world_render_rect = (45, 45, 640, 80) # Off by a quarter of a tile
-            world_render_rect = (0, 0, 180,180)
-            world_render_rect = (0, 0, 100, 100)
+            world_render_rect = (45, 45, 640, 480)
+
             draw_world(self.world, self.player, self.screen, world_render_rect, crop=True)
             if self.player.image:
                 player_location = (world_render_rect[0] + world_render_rect[2] / 2.0 - self.player.size * self.tilewidth / 2.0, 
@@ -163,7 +159,7 @@ class Game(App):
 
     def timer(self):
         #Check timed objects against the global timer
-        if random.randint(0, 299) == 0:
+        if random.randint(0, 29999) == 0:
             fps = 1.0 / (time.clock() - self.time_of_last_frame)
             print "%s FPS" % fps
         self.time_since_last_frame = time.clock() - self.time_of_last_frame 

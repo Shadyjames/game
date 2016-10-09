@@ -100,8 +100,6 @@ class Entity:
 
             direction = self.speed[axis] / abs(self.speed[axis])
             if floor(self.position[axis] + half_size * direction) != floor(self.destination[axis] + half_size * direction):
-                print self.position[axis], half_size
-                print self.destination[axis], half_size
                 # We have crossed a tile border! Time to check what we're running into
                 direction = self.speed[axis] / abs(self.speed[axis])
                 
@@ -117,10 +115,11 @@ class Entity:
                     corner_point[other_axis1] += half_size * (1 + -2 * (i % 2))
                     corner_point[other_axis2] += half_size * (1 + -2 * ((i / 2) % 2))
 
-                    destination_tile = world.get(*[int(coord) for coord in corner_point])
+                    destination_tile = world.get(*[int(floor(coord)) for coord in corner_point])
                     if destination_tile.collision:
                         print "COLLISION HAPPEN: %s" % corner_point
                         print self.position
+                        print [int(coord) for coord in corner_point]
                         self.speed[axis] = 0
                         break
 
