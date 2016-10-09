@@ -22,8 +22,7 @@ class App:
         self.last_time = time.clock()
         self.config = ConfigParser.ConfigParser()
         self.config.read("settings.cfg")
-        #self.player = Player.Player([20.5, 12.5, 0], self.config)
-        self.player = Player.Player([1.5, 1.5, 0], self.config)
+        self.player = Player.Player([20, 12, 0], self.config)
         self.windowx = windowx
         self.windowy = windowy
         self.tilewidth = 32
@@ -36,12 +35,7 @@ class App:
         self.world = world.World(x=int(self.config.get('world', 'x')), y=int(self.config.get('world', 'y')), z=10)
         for i in range(10):
             self.world.set(world.Tile(5), i, 0)
-
-        self.world.set(world.Tile(5), 9, 9)
-        self.world.set(world.Tile(5), 9, 7)
-        self.world.set(world.Tile(5), 8, 8)
         #world.load()
-
 
         #Load control bindings
         self.bindings = ConfigParser.ConfigParser()
@@ -85,7 +79,7 @@ class App:
         if self.pure_bindings:
             for key, control in self.controls.iteritems():
                 self.update_control(control, keypresses[key])
-        else:   
+        else:
             # Get the current modifier arrangement (ctrl/alt/shift held)
             current_modifiers = tuple\
                     ([
@@ -118,7 +112,7 @@ class Game(App):
         App.__init__(self)
         self.pure_bindings = bool(int(self.config.get('game', 'pure_bindings')))
         self.controls = load_controls('bindings', pure=self.pure_bindings)
-        self.player.image = pygame.transform.scale(pygame.image.load("assets/images/player.png").convert(32), (int(self.tilewidth * self.player.size), int(self.tilewidth * self.player.size)))
+        self.player.image = pygame.image.load("assets/images/player.png").convert(32)   
     def main(self):
         while self.running:
             #print("WOOT SDFHJSDGJHDFJKAHGHJASFCD VASFCV DGB")
@@ -126,12 +120,9 @@ class Game(App):
             if event.type == pygame.QUIT:
                 self.running = False
             world_render_rect = (45, 45, 640, 480)
-
-            draw_world(self.world, self.player, self.screen, world_render_rect, crop=True)
-            if self.player.image:
-                player_location = (world_render_rect[0] + world_render_rect[2] / 2.0 - self.player.size * self.tilewidth / 2.0, 
-                                   world_render_rect[1] + world_render_rect[3] / 2.0 - self.player.size * self.tilewidth / 2.0)
-                screen.blit(self.player.image, player_location)
+            draw_world(self.world, self.player, self.screen, (45, 45, 640, 480), crop=True)
+            if self.camera.image:
+                screen.blit(self.camera.image, (blit_rect[0] + blit_rect[2] / 2, blit_rect[1] + blit_rect[3] / 2))
 
             pygame.display.flip()
             self.do_input()
@@ -159,7 +150,7 @@ class Game(App):
 
     def timer(self):
         #Check timed objects against the global timer
-        if random.randint(0, 29999) == 0:
+        if random.randint(0, 299) == 0:
             fps = 1.0 / (time.clock() - self.time_of_last_frame)
             print "%s FPS" % fps
         self.time_since_last_frame = time.clock() - self.time_of_last_frame 

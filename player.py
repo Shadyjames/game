@@ -4,10 +4,13 @@ X = 0
 Y = 1
 Z = 2
 axes = [X, Y, Z]
+from world import tilewidth
 
 class Entity:
+    # We want the player to be 0.8 of a tile in width, but that must be
+    # rounded to the nearest pixel using the construct you see below
+    size = 1.0 * int(tilewidth * 0.8) / tilewidth
     size = 1
-    speed = [0, 0, 0]
     #position, maxspeed, diagspeed, accel, friction all set by subclass - differ for each npc/player
     
     @property
@@ -88,11 +91,15 @@ class Entity:
         # Test collision with the terrain. Test on one axis at a time, then pairs, then all three
         # You laugh, but it is simple, fast and robust.
 
-        half_size = self.size / 2
+        half_size = self.size / 2.0
 
         # One axis at a time, check if we've crossed a tile border
         for axis in axes:
-            if floor(self.position[axis] + 0.5) != floor(self.destination[axis] + 0.5):
+            if not self.speed[axis]:
+                continue
+
+            direction = self.speed[axis] / abs(self.speed[axis])
+            if floor(self.position[axis] + half_size * direction) != floor(self.destination[axis] + half_size * direction):
                 # We have crossed a tile border! Time to check what we're running into
                 direction = self.speed[axis] / abs(self.speed[axis])
                 
@@ -104,12 +111,15 @@ class Entity:
                 # Get the tiles we're about to enter for all four corners of our hitbox on that face
                 for i in range(4):
                     corner_point = isolated_destination[:]
-                    corner_point[axis] += direction * 0.5 # All points on this face share the same coordinate on the collision axis
-                    corner_point[other_axis1] += 0.5 * (1 + -2 * (i % 2))
-                    corner_point[other_axis2] += 0.5 * (1 + -2 * ((i / 2) % 2))
+                    corner_point[axis] += direction * half_size # All points on this face share the same coordinate on the collision axis
+                    corner_point[other_axis1] += half_size * (1 + -2 * (i % 2))
+                    corner_point[other_axis2] += half_size * (1 + -2 * ((i / 2) % 2))
 
-                    destination_tile = world.get(*[int(coord) for coord in corner_point])
+                    destination_tile = world.get(*[int(floor(coord)) for coord in corner_point])
                     if destination_tile.collision:
+                        print "COLLISION HAPPEN: %s" % corner_point
+                        print self.position
+                        print [int(coord) for coord in corner_point]
                         self.speed[axis] = 0
                         break
 
@@ -162,9 +172,6 @@ class Entity:
         raise Exception("what the FUCK are you doing?")
 
 
-
-
-
 class Player(Entity):
     #Movestates: left, right, up, down
     movestates = [0, 0, 0, 0]
@@ -175,6 +182,7 @@ class Player(Entity):
         self.diagspeed = sqrt(pow(self.maxspeed, 2) / 2)
         self.accel = float(config.get('player', 'accel'))
         self.friction = float(config.get('player', 'friction'))
+        self.speed = [0, 0, 0]
 
     def update(self, time_since_last_frame, world):
         #self.movestates has TOO MANY LETTERS IN IT

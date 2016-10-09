@@ -1,6 +1,8 @@
 import pygame
+import random
 from math import floor, ceil
 import os
+import sys
 screenregions = []
 tilewidth = 32
 left, right, top, bottom = range(4)
@@ -30,79 +32,42 @@ for i in files:
 class TileTypeException(Exception):
     pass
 
-#This SHOULD be faster than the below draw_world for large chunk sizes
 def draw_world(world, player, screen, rect, crop=False):
-    world = world
-    screen = screen
-    xorig, yorig, w, h = rect
-    #print "Rect is: %s" % repr(rect)
-    xtiles = int(ceil(w / tilewidth)) + 1
-    ytiles = int(ceil(h / tilewidth)) + 1
-    xoffset = player.x % 1
-    yoffset = player.y % 1
-    world_rect = (int(floor(player.x - xtiles/2)), int(floor(player.y - ytiles/2)), xtiles, ytiles)
-    #print world_rect
-    #print "Passing %s to get_rect" % repr(world_rect)
-    if not crop:
-        #Draw the map straight to the screen
-        region = world.get_rect(world_rect, player.z)
-        for x in range(len(region)):
-            for y in range(len(region[x])):
-                tile = region[x][y]
-                tile_type = tile.type if tile is not None else 0
-                try:
-                    screen.blit(tile_images[tile_type], 
-                                    (xorig + tilewidth + (x - xoffset)*tilewidth, 
-                                     yorig + tilewidth + (y - yoffset)*tilewidth))
-                except KeyError:
-                    raise TileTypeException("Attempted to render tile type that did not exist (not found in assets/images/): %s.png not found" % tile_type)
+    draw_x, draw_y, draw_w, draw_h = rect
 
+    # Almost all of this could be precalculated if rect was static
+    # Calculate the world x/y at the origin
+    world_x = player.x - draw_w/2.0/tilewidth
+    world_y = player.y - draw_h/2.0/tilewidth
+    # world_w/h is the w/h inclusive of all tiles only partially inside the draw rect
+    world_w = int(ceil(float(draw_w) / tilewidth) + 1)
+    world_h = int(ceil(float(draw_h) / tilewidth) + 1)
+
+    world_rect = (int(floor(world_x)), int(floor(world_y)), world_w, world_h)
+    world_region = world.get_rect(world_rect, player.z)
+
+    if crop:
+        screenbuffer = pygame.Surface((draw_w, draw_h))
+        surface = screenbuffer
     else:
-        #Draw the map to the buffer
-        screenbuffer = pygame.Surface((w, h))
-        region = world.get_rect(world_rect, player.z)
-        #print region
-        #sys.exit()
-        for x in range(len(region)):
-            for y in range(len(region[x])):
-                tile = region[x][y]
-                try:
-                    tile_type = tile.type if tile is not None else 0
-                    screenbuffer.blit(tile_images[tile_type], 
-                                        ((x - xoffset)*tilewidth, 
-                                        (y - yoffset)*tilewidth))
-                except KeyError:
-                    raise TileTypeException("Attempted to render tile type that did not exist (not found in assets/images/): %s.png not found" % tile_type)
+        surface = screen
 
+    for x in range(world_w):
+        for y in range(world_h):
+            tile = world_region[x][y]
+            tile_type = tile.type if tile is not None else 0
+            try:
+                tile_image = tile_images[tile_type]
+            except KeyError:
+                raise TileTypeException("Attempted to render tile type that did not exist (not found in assets/images/): %s.png not found" % tile_type)
+            tile_draw_x = (x - world_x % 1) * tilewidth + 0.4
+            tile_draw_y = (y - world_y % 1) * tilewidth + 0.4
+            if not crop:
+                # if we aren't drawing to a buffer we need to add the draw rects position within the screen at this time
+                tile_draw_x += draw_x
+                tile_draw_y += draw_y
+            surface.blit(tile_images[tile_type], (tile_draw_x, tile_draw_y))
+
+    if crop:
         #Draw from the buffer to the screen
-        screen.blit(screenbuffer, (xorig, yorig))
-
-#Old one. Will be slower than the above for larger chunk sizes
-'''
-def draw_world(world, player, screen, rect, crop=False):
-        xorig, yorig, w, h = rect
-
-        xtiles = int(ceil(w / tilewidth))
-        ytiles = int(ceil(h / tilewidth)) 
-        xoffset = player.x % 1
-        yoffset = player.y % 1
-
-        if not crop:
-            #Draw the map straight to the screen
-            for x in range(xtiles + 1):
-                for y in range(ytiles + 1):
-                    tile = world.get(int(floor(player.x + x - xtiles/2)), int(floor(player.y + y - ytiles/2)))
-                    screen.blit(tile_images[tile.type], (xorig + tilewidth + (x - xoffset)*tilewidth, 
-                                                         yorig + tilewidth + (y - yoffset)*tilewidth))
-        else:
-            #Draw the map to the buffer
-            screenbuffer = pygame.Surface((w, h))
-            for x in range(xtiles + 1):
-                for y in range(ytiles + 1):
-                    tile = world.get(int(floor(player.x + x - xtiles/2)), int(floor(player.y + y - ytiles/2)))
-                    screenbuffer.blit(tile_images[tile.type], ((x - xoffset)*tilewidth, 
-                                                               (y - yoffset)*tilewidth))
-
-            #Draw from the buffer to the screen
-            screen.blit(screenbuffer, (xorig, yorig))
-'''
+        screen.blit(screenbuffer, (draw_x, draw_y))
