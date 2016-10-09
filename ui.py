@@ -101,12 +101,8 @@ class WorldRegion(ScreenRegion):
 
         if self.world.selection_start is not None:
             #Draw the selection area
-            start_pos = self.screen_from_world([floor(value) for value in self.world.selection_start], debug)
-            end_mpos = self.screen_from_world([floor(value) for value in self.world.selection_end], debug)
-
-            if debug:
-                print start_pos
-                print end_mpos
+            start_pos = self.screen_from_world([floor(value) for value in self.world.selection_start])
+            end_mpos = self.screen_from_world([floor(value) for value in self.world.selection_end])
 
             rect = [
                     end_mpos[0] if end_mpos[0] < start_pos[0] else start_pos[0],
@@ -145,6 +141,7 @@ class WorldRegion(ScreenRegion):
         xoffset = xorig - world_xorig * self.app.tilewidth
         screen_x = xoffset + coords[0] * self.app.tilewidth
 
+
         world_yorig = self.camera.y - h / 2.0 / self.app.tilewidth
         yoffset = yorig - world_yorig * self.app.tilewidth
         screen_y = yoffset + coords[1] * self.app.tilewidth
@@ -154,6 +151,8 @@ class WorldRegion(ScreenRegion):
         # Calculate world coordinates from screen coordinates
         xorig, yorig, w, h = self.rect
 
+        # world_*orig == World coordinate at xorig
+        # *offset == screen distance between left of world, and left of world render box
         world_xorig = self.camera.x - w / 2.0 / self.app.tilewidth
         world_xoffset = float(xorig) / self.app.tilewidth - world_xorig
         world_x = float(coords[0]) / self.app.tilewidth - world_xoffset
